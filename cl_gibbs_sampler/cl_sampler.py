@@ -3,15 +3,8 @@ import os
 import numpy as np
 import scipy as sp
 
-# Plotting
-#import matplotlib.pyplot as plt
-#import cmocean
-#import cmocean.cm as cmo
-#import seaborn as sns
-#import pylab as plt
-#import matplotlib as mpl
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
-#from matplotlib import ticker
+# C_ell / sigma_ell calculation
+from scipy.stats import invgamma
 
 # Mapping
 import healpy as hp
@@ -547,6 +540,79 @@ def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, 
                     sigma_full = np.concatenate((sigma_full,sigma_ij))
                     
     return sigma_full
+
+def get_sigma_ell(alms,lmax):
+    """
+    Calculates sigma_ell for the angular powerspectrum given a set of
+    alms and an lmax. The alms are 'realified' i.e. flattened with first 
+    the real-part and then the imaginary part. Note, there should be no
+    m=0 imaginary modes. The alms are (m,l)-ordered (m-major).
+
+    Parameters
+    ----------
+    * alms: (ndarray (floats))
+        The array represents all postive (+m) modes including zero
+        and has double length, as real and imaginary values are split.
+        The first hald is the real values.
+
+    * lmax: (int)
+        The lmax of the modes.
+
+    Returns
+    -------
+    * sigma_ell: (ndarray (floats))
+        An array of sigma_ell values for the angular power spectrum.
+    """
+
+    # excluding ell=0 because it's not defined for the invgamma func.
+    sigma_ell = np.zeros(shape = ((lmax+1)-1))
+
+    # Calculate sigma_ell = 1/(2*ell + 1) sum_m |a_lm|^2
+    for ell in np.arange(1,lmax+1):
+        real_idx, _ = get_idx_ml(0,ell,lmax)
+        sigma_ell[ell-1] = alms[real_idx] * alms[real_idx]
+
+        for em in np.arange(1,ell+1):
+            real_idx, imag_idx = get_idx_ml(em, ell, lmax)
+            sigma_ell[ell-1] += 2 * (alms[real_idx] * alms[real_idx] +
+                                     alms[imag_idx] * alms[imag_idx])
+        
+        sigma_ell[ell-1] /= 2*ell + 1
+
+    return sigma_ell
+
+def cl_samples(alms, lmax):
+    """
+    Uses the inverse gamma function (see Eriksen 2007) to generate 
+    samples of C_ell given the alms. The inverse gammafunction doesn't
+    work for ell=0. 
+
+    Parameters
+    ----------
+    * alms: (ndarray (floats))
+        The array represents all postive (+m) modes including zero
+        and has double length, as real and imaginary values are split.
+        The first hald is the real values.
+
+    * lmax: (int)
+        The lmax of the modes.
+
+    Returns
+    -------
+    * cl_samples: (ndarray (floats))
+        An array containing the C_ell samples ordered by ell-value. 
+        Note, the inverse gamma function doesn't work for ell=0.
+    """
+    
+    sigma_ell = get_sigma_ell(alms, lmax)
+
+    unique_ell = np.arange(1,lmax+1)
+    a = (2*unique_ell - 1)/2
+    
+    cl_samples = invgamme.rvs(a, loc=0, scale=1)
+    cl_samples *= sigma_ell * (2*unique_ell +1)/2
+
+    return cl_samples
 
 
 ###### MAIN ######    
