@@ -547,6 +547,7 @@ def get_sigma_ell(alms,lmax):
     alms and an lmax. The alms are 'realified' i.e. flattened with first 
     the real-part and then the imaginary part. Note, there should be no
     m=0 imaginary modes. The alms are (m,l)-ordered (m-major).
+    The invgamm function is not defined for ell=0 so this mode is left out.
 
     Parameters
     ----------
@@ -581,7 +582,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def cl_samples(alms, lmax):
+def get_cl_samples(alms, lmax):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -590,7 +591,7 @@ def cl_samples(alms, lmax):
     Parameters
     ----------
     * alms: (ndarray (floats))
-        The array represents all postive (+m) modes including zero
+        The array (shape=((lmax+1)**2)) represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
         The first hald is the real values.
 
@@ -600,8 +601,9 @@ def cl_samples(alms, lmax):
     Returns
     -------
     * cl_samples: (ndarray (floats))
-        An array containing the C_ell samples ordered by ell-value. 
-        Note, the inverse gamma function doesn't work for ell=0.
+        An array (shape = lmax) containing the C_ell samples ordered by ell-value. 
+        Note, the inverse gamma function doesn't work for ell=0, so this mode is
+        excluded.
     """
     
     sigma_ell = get_sigma_ell(alms, lmax)
@@ -613,6 +615,49 @@ def cl_samples(alms, lmax):
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
     return cl_samples
+
+def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
+    """
+    Set the signal covariance matrix (S) to be given by the C_ell samples for the 
+    a_lms. The invgamma function is not defined for ell = 0, so for these modes 
+    the prior_cov values are used and are thus held fixed throughout. The ordering
+    of the signal_cov matrix is given by the same ordering and shape as the 
+    realified a_lms, since it is enough to define the diagonal.
+
+    Parameters
+    ----------
+    * prior_cov: (ndarray (floats))
+        An array (shape = ((lmax+1)**2) ) containing the diagonal of the prior
+        covariance. This is used to define the signal_cov for ell = 0.
+
+    * cl_samples: (ndarray (floats))
+        An array (shape = lmax) containing the C_ell samples ordered by ell-value. 
+        Note, the inverse gamma function doesn't work for ell=0, so this mode is
+        excluded.
+
+    * lmax: (int)
+        The lmax of the modes.
+
+    Returns
+    -------
+    * signal_cov:
+
+    """
+
+    # The get_cl_samples function is not defined for ell=0, use prior_cov instead
+    signal_cov = prior_cov.copy()
+
+    # Then update all other entries (ell > 0)
+    for ell in np.arange(1,lmax+1):
+        real_idx, _ = get_idx_ml(0,ell,lmax)
+        signal_cov[real_idx] = cl_samples[ell-1]
+
+        for em in np.arange(1,ell+1):
+            real_idx, imag_idx = get_idx_ml(em, ell, lmax)
+            signal_cov[real_idx] = cl_samples[ell-1]
+            signal_cov[imag_idx] = cl_samples[ell-1]
+
+    return signal_cov
 
 
 ###### MAIN ######    
