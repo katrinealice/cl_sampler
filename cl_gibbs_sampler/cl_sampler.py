@@ -518,6 +518,17 @@ def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_prior_cov, vis_response):
     
     return left_hand_side
 
+def lhs_operator(x):
+    """
+    Wrapper function for matvec for LinearOperator since matvec only takes
+    one argument.
+    Make sure that the inverse noise covariance, inverse signal covariance,
+    and vis_response are correctly defined in the code before use.
+
+    """
+
+    return apply_lhs_no_rot(x, inv_noise_cov, inv_signal_cov, vis_response)
+
 def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, include_autos=False):
     nbls = len(ants)
     indx = auto_visibilities.shape[0]//nbls
@@ -779,13 +790,7 @@ if __name__ == "__main__":
     data_noise = (np.random.randn(noise_cov.size) + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
     data_vec = model_true + data_noise
 
-    # Define left hand side operator 
-    def lhs_operator(x):
-        y = apply_lhs_no_rot(x, inv_noise_cov, inv_prior_cov, vis_response)
-
-        return y
-
-    # Wiener filter solution to provide initial guess:
+    # RHS: Wiener filter solution to provide initial guess:
     omega_0_wf = np.zeros_like(a_0)
     omega_1_wf = np.zeros_like(model_true, dtype=np.complex128)
     rhs_wf = construct_rhs_no_rot(data_vec,
@@ -796,6 +801,9 @@ if __name__ == "__main__":
                                   a_0, 
                                   vis_response)
     
+    # LHS: Define the inv_signal_cov before calling the LinearOperator function
+    inv_signal_cov = inv_prior_cov.copy()
+
     # Build linear operator object 
     lhs_shape = (rhs_wf.size, rhs_wf.size)
     lhs_linear_op = LinearOperator(matvec = lhs_operator,
