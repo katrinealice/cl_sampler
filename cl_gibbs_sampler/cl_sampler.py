@@ -776,8 +776,10 @@ if __name__ == "__main__":
     # Set the prior mean by the prior variance 
     a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
     _, ell_idx, _ = get_em_ell_idx(lmax) 
-    # setting the ell=0 mode to be the true value
-    a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
+    
+    #TODO keep this for cl_sampler version?? 
+    ## setting the ell=0 mode to be the true value
+    #a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
     
     
     # Save a_0 in separate file
@@ -787,7 +789,8 @@ if __name__ == "__main__":
     np.random.seed(data_seed)
     noise_cov = 0.5 * radiometer_eq(autos@x_true, ants, delta_time, delta_freq)
     inv_noise_cov = 1/noise_cov
-    data_noise = (np.random.randn(noise_cov.size) + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
+    data_noise = (np.random.randn(noise_cov.size) 
+                  + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
     data_vec = model_true + data_noise
 
     # RHS: Wiener filter solution to provide initial guess:
@@ -815,26 +818,43 @@ if __name__ == "__main__":
                                           # tol = 1e-07,
                                           maxiter = 15000)
     
-    def samples(key):
+    #TODO figure out what a good way to set these would be. 
+    alm_random_seed = 100*jobid + key
+    cl_random_seed = 100*jobid + key  
+
+    def get_alm_samples(alm_random_seed,
+                        data_vec,
+                        inv_noise_cov,
+                        inv_signal_cov,
+                        a_0,
+                        vis_response):
+        """
+        Function to draw samples from the GCR equation.
+        """
         t_iter = time.time()
 
         # Set a random seed defined by the key
-        random_seed = 100*jobid + key
         np.random.seed(random_seed)
         #random_seed = np.random.get_state()[1][0] #for test/output purposes
 
         # Generate random maps for the realisations
         omega_0 = np.random.randn(a_0.size)
-        omega_1 = (np.random.randn(model_true.size) + 1.j*np.random.randn(model_true.size))/np.sqrt(2)
+        omega_1 = (np.random.randn(data_vec.size) + 1.j*np.random.randn(data_vec.size))/np.sqrt(2)
 
-        # Construct the right hand side
+        # Construct RHS
         rhs = construct_rhs_no_rot(data_vec,
                                    inv_noise_cov, 
-                                   inv_prior_cov,
+                                   inv_signal_cov,
                                    omega_0,
                                    omega_1,
                                    a_0,
                                    vis_response)
+
+        # Construct LHS operator
+        lhs_shape = (rhs.size, rhs.size)
+        lhs_linear_op = LinearOperator(matvec = lhs_operator,
+                                       shape = lhs_shape)
+
 
         # Run and time solver
         time_start_solver = time.time()
@@ -842,12 +862,12 @@ if __name__ == "__main__":
                                           b = rhs,
                                           # tol = 1e-07,
                                           maxiter = 15000,
-                                          x0 = wf_soln) #initial guess
+                                          x0 = wf_soln) #TODO update initial guess?
         solver_time = time.time() - time_start_solver
         iteration_time = time.time()-t_iter
         
         # Save output
-        np.savez(path+'results_'+f'{data_seed}_'+f'{random_seed}',
+        np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}',
                  omega_0=omega_0,
                  omega_1=omega_1,
                  key=key,
@@ -866,16 +886,16 @@ if __name__ == "__main__":
     
     avg_iter_time = 0
 
-    # Multiprocessing, getting the samples    
-    number_of_cores = int(os.environ['SLURM_CPUS_PER_TASK'])
-    print(f'\nSLURM_CPUS_PER_TASK = {number_of_cores}')
+    ## Multiprocessing, getting the samples    
+    #number_of_cores = int(os.environ['SLURM_CPUS_PER_TASK'])
+    #print(f'\nSLURM_CPUS_PER_TASK = {number_of_cores}')
 
-    with Pool(number_of_cores) as pool:
-        # issue tasks and process results
-        for result in pool.map(samples, range(n_samples)):
-            key, iteration_time = result
-            avg_iter_time += iteration_time
-            #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
+    #with Pool(number_of_cores) as pool:
+    #    # issue tasks and process results
+    #    for result in pool.map(samples, range(n_samples)):
+    #        key, iteration_time = result
+    #        avg_iter_time += iteration_time
+    #        #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
 
     avg_iter_time /= (key+1)
     print(f'average_iter_time:\n{avg_iter_time}\n')
