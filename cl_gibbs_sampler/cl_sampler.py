@@ -552,12 +552,12 @@ def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, 
                     
     return sigma_full
 
-def get_alm_samples(alm_random_seed,
-                    data_vec,
+def get_alm_samples(data_vec,
                     inv_noise_cov,
                     inv_signal_cov,
                     a_0,
-                    vis_response):
+                    vis_response,
+                    alm_random_seed):
     """
     Function to draw samples from the GCR equation.
     """
@@ -876,22 +876,33 @@ if __name__ == "__main__":
                                           # tol = 1e-07,
                                           maxiter = 15000)
     
-    #TODO figure out what a good way to set these would be. 
-    alm_random_seed = 100*jobid + key
-    cl_random_seed = 100*jobid + key  
+    # Get alm and cl samples
+    for n in np.arange(n_samples):
 
-    #TODO set this up to be a loop instead! 
-    # get alm samples 
-    x_soln, key, iteration_time = get_alm_samples(alm_random_seed,
-                                                  data_vec,
-                                                  inv_noise_cov,
-                                                  inv_signal_cov,
-                                                  a_0,
-                                                  vis_response)
-    
-    # get cl samples
-    cl_samples = get_cl_samples(alms=x_soln, lmax=lmax)
+        #TODO figure out what a good way to set these would be. 
+        alm_random_seed = 100*jobid + key
+        cl_random_seed = 100*jobid + key  
 
+        # get alm samples using prior 
+        x_soln, key, iteration_time = get_alm_samples(data_vec = data_vec,
+                                                      inv_noise_cov = inv_noise_cov,
+                                                      inv_signal_cov = inv_signal_cov,
+                                                      a_0 = a_0,
+                                                      vis_response = vis_response,
+                                                      alm_random_seed = alm_random_seed)
+        #TODO save samples in file
+        # get cl samples
+        cl_samples = get_cl_samples(alms=x_soln,
+                                    lmax=lmax,
+                                    cl_random_seed=cl_random_seed)
+        
+
+        # Change signal_cov to use C_ell values
+        signal_cov = set_signal_cov_by_cl(prior_cov = prior_cov,
+                                          cl_samples = cl_samples,
+                                          lmax = lmax)
+        inv_signal_cov = 1/signal_cov
+        
     #TODO set up all timing again!! 
     # Time for all precomputations
     #precomp_time = time.time()-start_time
