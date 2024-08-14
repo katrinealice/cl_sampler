@@ -557,13 +557,12 @@ def get_alm_samples(data_vec,
                     inv_signal_cov,
                     a_0,
                     vis_response,
-                    alm_random_seed):
+                    random_seed):
     """
     Function to draw samples from the GCR equation.
     """
     t_iter = time.time()
 
-    # Set a random seed defined by the key
     np.random.seed(random_seed)
     #random_seed = np.random.get_state()[1][0] #for test/output purposes
     
@@ -600,7 +599,7 @@ def get_alm_samples(data_vec,
     np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}',
              omega_0=omega_0,
              omega_1=omega_1,
-             key=key,
+             alm_random_seed=random_seed,
              x_soln=x_soln,
              rhs=rhs,
              convergence_info=convergence_info,
@@ -651,7 +650,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax):
+def get_cl_samples(alms, lmax, random_seed):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -674,6 +673,7 @@ def get_cl_samples(alms, lmax):
         Note, the inverse gamma function doesn't work for ell=0, so this mode is
         excluded.
     """
+    np.random.seed(random_seed)
     
     sigma_ell = get_sigma_ell(alms, lmax)
 
@@ -683,6 +683,13 @@ def get_cl_samples(alms, lmax):
     cl_samples = invgamme.rvs(a, loc=0, scale=1)
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
+    # Save output
+    np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}',
+             sigma_ell=sigma_ell,
+             cl_samples=cl_samples,
+             cl_random_seed=random_seed,
+            )
+ 
     return cl_samples
 
 def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
@@ -877,24 +884,24 @@ if __name__ == "__main__":
                                           maxiter = 15000)
     
     # Get alm and cl samples
-    for n in np.arange(n_samples):
+    for key in range(n_samples):
 
-        #TODO figure out what a good way to set these would be. 
+        # Set random seeds by the sample no. to pass into the sample functions
         alm_random_seed = 100*jobid + key
         cl_random_seed = 100*jobid + key  
 
-        # get alm samples using prior 
+        # get alm samples using prior for the first sample, then C_ell 
         x_soln, key, iteration_time = get_alm_samples(data_vec = data_vec,
                                                       inv_noise_cov = inv_noise_cov,
                                                       inv_signal_cov = inv_signal_cov,
                                                       a_0 = a_0,
                                                       vis_response = vis_response,
-                                                      alm_random_seed = alm_random_seed)
+                                                      random_seed = alm_random_seed)
         #TODO save samples in file
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,
-                                    cl_random_seed=cl_random_seed)
+                                    random_seed=cl_random_seed)
         
 
         # Change signal_cov to use C_ell values
