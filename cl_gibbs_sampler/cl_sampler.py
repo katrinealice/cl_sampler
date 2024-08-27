@@ -699,6 +699,8 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
     the prior_cov values are used and are thus held fixed throughout. The ordering
     of the signal_cov matrix is given by the same ordering and shape as the 
     realified a_lms, since it is enough to define the diagonal.
+    There is a factor 1/2 on the signal_cov due to accounting for the realification
+    when setting the signal variance by the C_ell values.
 
     Parameters
     ----------
@@ -716,7 +718,10 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
 
     Returns
     -------
-    * signal_cov:
+    * signal_cov: (ndarray (floats))
+        An array (shape = ((lmax+1)**2) ) containing the signal covariance 
+        corresponding to the realified alm-modes defiend by the power spectrum
+        samples (cl_samples) and the prior covariance (prior_cov). 
 
     """
 
