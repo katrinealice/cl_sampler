@@ -726,12 +726,12 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
     # Then update all other entries (ell > 0)
     for ell in np.arange(1,lmax+1):
         real_idx, _ = get_idx_ml(0,ell,lmax)
-        signal_cov[real_idx] = cl_samples[ell-1]
+        signal_cov[real_idx] = 0.5 * cl_samples[ell-1]  # factor 1/2 due to 'realification'
 
         for em in np.arange(1,ell+1):
             real_idx, imag_idx = get_idx_ml(em, ell, lmax)
-            signal_cov[real_idx] = cl_samples[ell-1]
-            signal_cov[imag_idx] = cl_samples[ell-1]
+            signal_cov[real_idx] = 0.5 * cl_samples[ell-1]  # factor 1/2 due to 'realification'
+            signal_cov[imag_idx] = 0.5 * cl_samples[ell-1]  # factor 1/2 due to 'realification'
 
     return signal_cov
 
