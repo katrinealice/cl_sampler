@@ -21,8 +21,10 @@ echo $@
 
 export OMP_NUM_THREADS=1 
 python -u $SCRIPT "$@" -dir=cl_sampler_test1 \
-                       -nsamples=100 \
+                       -nsamples=20 \
                        -data_seed=20 \
                        -prior_seed=30 \
+                       -lmax=10\
+                       -nside=128\
                        -cosmic_var=false \
                        -jobid=$SLURM_ARRAY_TASK_ID
