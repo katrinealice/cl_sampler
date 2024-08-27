@@ -325,7 +325,7 @@ def get_idx_ml(em, ell, lmax):
     common_idx_real, common_idx_imag = find_common_true_index(arr_em=em_check,
                                                               arr_ell=ell_check,
                                                               lmax=lmax)
-    if common_idx_imag = []: # happens if m=0
+    if common_idx_imag == []: # happens if m=0
         idx_list = [common_idx_real]
         print('skipping imaginary index in find_idx_ml because m=0')
     else:
