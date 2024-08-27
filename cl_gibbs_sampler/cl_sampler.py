@@ -902,7 +902,6 @@ if __name__ == "__main__":
                                                       a_0 = a_0,
                                                       vis_response = vis_response,
                                                       random_seed = alm_random_seed)
-        #TODO save samples in file
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,
