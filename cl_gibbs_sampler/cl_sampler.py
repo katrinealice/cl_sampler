@@ -329,7 +329,7 @@ def get_idx_ml(em, ell, lmax):
         idx_list = [common_idx_real]
         print('skipping imaginary index in find_idx_ml because m=0')
     else:
-        idx_list = [common_idx_real, common_idx_imag]:
+        idx_list = [common_idx_real, common_idx_imag]
 
     for common_idx in idx_list:
         assert common_idx == idx[common_idx], "the global index does not match the index list"
@@ -686,7 +686,7 @@ def get_cl_samples(alms, lmax, random_seed):
     unique_ell = np.arange(1,lmax+1)
     a = (2*unique_ell - 1)/2
     
-    cl_samples = invgamme.rvs(a, loc=0, scale=1)
+    cl_samples = invgamma.rvs(a, loc=0, scale=1)
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
     # Save output
