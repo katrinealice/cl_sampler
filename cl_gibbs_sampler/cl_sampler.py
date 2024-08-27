@@ -67,6 +67,12 @@ AP.add_argument("-jobid", "--jobid", required=False,
 AP.add_argument("-nsamples", "--number_of_samples", type=int, required=False,
         help="Int. total number of samples")
 
+AP.add_argument("-lmax", "--lmax", type=int, required=False,
+        help="the maximum ell-value")
+
+AP.add_argument("-nside", "--nside", type=int, required=False,
+        help="the resolution given to HEALpy")
+
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
 
@@ -786,6 +792,17 @@ if __name__ == "__main__":
         # If none is passed use 100 samples as default
         n_samples = 100
 
+    # The lmax for the spherical harmonic modes
+    if ARGS['lmax']:
+        lmax = int(ARGS['lmax'])
+    else:
+        lmax = 20
+
+    # The nside / resolution for HEALpy operations
+    if ARGS['nside']:
+        nside = int(ARGS['nside'])
+    else:
+        nside = 128
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -800,8 +817,6 @@ if __name__ == "__main__":
 
     ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
-    lmax = 20
-    nside = 128
     beam_diameter = 14.
     beams = [pyuvsim.AnalyticBeam('gaussian', diameter=beam_diameter) for ant in ants]
     freqs = np.linspace(100e6, 102e6, 2)
