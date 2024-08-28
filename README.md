@@ -27,4 +27,4 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 
 **nside**: The resolution used for HEALpy operations. If not provided, it defaults to 128.
 
-**cosmic_variance**: A boolean argument to include or exclude cosmic variance in the prior variance. It accepts values like ‘true’, ‘yes’, ‘t’, ‘y’, ‘1’ for True and ‘false’, ‘no’, ‘f’, ‘n’, ‘0’ for False. If not provided, it defaults to False. 
+**cosmic_variance**: A boolean argument to include or exclude cosmic variance in the prior variance. If not provided, it defaults to False. 
