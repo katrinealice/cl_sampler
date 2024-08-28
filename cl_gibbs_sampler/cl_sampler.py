@@ -615,7 +615,7 @@ def get_alm_samples(data_vec,
              iteration_time=iteration_time
             )
         
-    return x_soln, key, iteration_time
+    return x_soln, iteration_time
 
 def get_sigma_ell(alms,lmax):
     """
@@ -920,12 +920,12 @@ if __name__ == "__main__":
         cl_random_seed = 100*jobid + key  
 
         # get alm samples using prior for the first sample, then C_ell 
-        x_soln, key, iteration_time = get_alm_samples(data_vec = data_vec,
-                                                      inv_noise_cov = inv_noise_cov,
-                                                      inv_signal_cov = inv_signal_cov,
-                                                      a_0 = a_0,
-                                                      vis_response = vis_response,
-                                                      random_seed = alm_random_seed)
+        x_soln, iteration_time = get_alm_samples(data_vec = data_vec,
+                                                 inv_noise_cov = inv_noise_cov,
+                                                 inv_signal_cov = inv_signal_cov,
+                                                 a_0 = a_0,
+                                                 vis_response = vis_response,
+                                                 random_seed = alm_random_seed)
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,

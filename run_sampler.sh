@@ -20,11 +20,11 @@ SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 echo $@
 
 export OMP_NUM_THREADS=1 
-python -u $SCRIPT "$@" -dir=cl_sampler_100 \
+python -u $SCRIPT "$@" -dir=cl_lmax_20 \
                        -nsamples=100 \
                        -data_seed=20 \
                        -prior_seed=30 \
-                       -lmax=10\
+                       -lmax=20\
                        -nside=128\
                        -cosmic_var=false \
                        -jobid=$SLURM_ARRAY_TASK_ID
