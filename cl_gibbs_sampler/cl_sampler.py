@@ -327,7 +327,6 @@ def get_idx_ml(em, ell, lmax):
                                                               lmax=lmax)
     if common_idx_imag == []: # happens if m=0
         idx_list = [common_idx_real]
-        print('skipping imaginary index in find_idx_ml because m=0')
     else:
         idx_list = [common_idx_real, common_idx_imag]
 
@@ -521,7 +520,7 @@ def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_prior_cov, vis_response):
     signal_term = inv_prior_cov * a_cr
     
     left_hand_side = (real_noise_term + imag_noise_term + signal_term) 
-    
+
     return left_hand_side
 
 def lhs_operator(x):
@@ -555,8 +554,11 @@ def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, 
                     vis_jj = auto_visibilities[j*indx:(j+1)*indx]#,:]
                     sigma_ij = ( vis_ii*vis_jj ) / ( Nnights*delta_time*delta_freq )
                     sigma_full = np.concatenate((sigma_full,sigma_ij))
-                    
-    return sigma_full
+ 
+    # this will be complex type due to inputs, check that the imag part is zero and recast type
+    assert np.all(sigma_full.imag == 0), "The imag part of the radiometer eq is not zero"                   
+    
+    return sigma_full.real
 
 def get_alm_samples(data_vec,
                     inv_noise_cov,
@@ -947,13 +949,13 @@ if __name__ == "__main__":
     #        avg_iter_time += iteration_time
     #        #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
 
-    #avg_iter_time /= (key+1)
-    print(f'average_iter_time:\n{avg_iter_time}\n')
+    ##avg_iter_time /= (key+1)
+    #print(f'average_iter_time:\n{avg_iter_time}\n')
 
-    total_time = time.time()-start_time
-    print(f'total_time:\n{total_time}\n')
-    print(f'All output saved in folder {path}\n')
-    print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
+    #total_time = time.time()-start_time
+    #print(f'total_time:\n{total_time}\n')
+    #print(f'All output saved in folder {path}\n')
+    #print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
  
     # Save a_0 (again) in separate file
     np.savez(path+'a_0_end_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
@@ -977,8 +979,8 @@ if __name__ == "__main__":
              beam_diameter=beam_diameter,
              freqs=freqs,
              lsts_hours=lsts_hours,
-             precomp_time=precomp_time,
-             total_time=total_time
+             #precomp_time=precomp_time,
+             #total_time=total_time
             )
     # creating a dictionary with string-keys as required by .npz files
     ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)
