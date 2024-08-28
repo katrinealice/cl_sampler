@@ -762,8 +762,9 @@ if __name__ == "__main__":
     path = f'/cosma8/data/dp270/dc-glas1/{directory}/'
     try: 
         os.makedirs(path)
+        print(f'Created folder {path}\n')
     except FileExistsError:
-        print('folder already exists')
+        print(f'Folder {path} already exists\n')
     
     # Defining the data_seed for the noise of the simulated data
     if ARGS['data_seed']:
@@ -904,9 +905,15 @@ if __name__ == "__main__":
                                           b = rhs_wf,
                                           # tol = 1e-07,
                                           maxiter = 15000)
+    # Time for all precomputations
+    precomp_time = time.time()-start_time
+    print(f'\nprecomputation took:\n{precomp_time} sec.\n')
+    avg_iter_time = 0
     
     # Get alm and cl samples
     for key in range(n_samples):
+
+        sample_start_time = time.time()
 
         # Set random seeds by the sample no. to pass into the sample functions
         alm_random_seed = 100*jobid + key
@@ -930,14 +937,11 @@ if __name__ == "__main__":
                                           cl_samples = cl_samples,
                                           lmax = lmax)
         inv_signal_cov = 1/signal_cov
-        
-    #TODO set up all timing again!! 
-    # Time for all precomputations
-    #precomp_time = time.time()-start_time
-    #print(f'\nprecomputation took:\n{precomp_time}\n')
-    
-    #avg_iter_time = 0
 
+        sample_total_time = time.time() - sample_start_time
+        avg_iter_time += sample_total_time
+
+  
     ## Multiprocessing, getting the samples    
     #number_of_cores = int(os.environ['SLURM_CPUS_PER_TASK'])
     #print(f'\nSLURM_CPUS_PER_TASK = {number_of_cores}')
@@ -949,13 +953,13 @@ if __name__ == "__main__":
     #        avg_iter_time += iteration_time
     #        #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
 
-    ##avg_iter_time /= (key+1)
-    #print(f'average_iter_time:\n{avg_iter_time}\n')
+    avg_iter_time /= n_samples
+    print(f'average_iter_time:\n{avg_iter_time} sec.\n')
 
-    #total_time = time.time()-start_time
-    #print(f'total_time:\n{total_time}\n')
-    #print(f'All output saved in folder {path}\n')
-    #print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
+    total_time = time.time()-start_time
+    print(f'total_time:\n{total_time} sec.\n')
+    print(f'All output saved in folder {path}\n')
+    print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
  
     # Save a_0 (again) in separate file
     np.savez(path+'a_0_end_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
@@ -979,8 +983,9 @@ if __name__ == "__main__":
              beam_diameter=beam_diameter,
              freqs=freqs,
              lsts_hours=lsts_hours,
-             #precomp_time=precomp_time,
-             #total_time=total_time
+             precomp_time=precomp_time,
+             avg_iter_time=avg_iter_time,
+             total_time=total_time
             )
     # creating a dictionary with string-keys as required by .npz files
     ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)

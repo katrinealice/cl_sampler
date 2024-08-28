@@ -20,8 +20,8 @@ SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 echo $@
 
 export OMP_NUM_THREADS=1 
-python -u $SCRIPT "$@" -dir=cl_sampler_test1 \
-                       -nsamples=20 \
+python -u $SCRIPT "$@" -dir=cl_sampler_100 \
+                       -nsamples=100 \
                        -data_seed=20 \
                        -prior_seed=30 \
                        -lmax=10\

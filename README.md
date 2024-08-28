@@ -9,7 +9,6 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 
 * #TODO update initial guess?
 * #TODO keep this for cl_sampler version? (referring to setting the ell=0 prior to set value)
-* #TODO set up all timing again!!
 * #TODO add more of the params as command line arguments
 
 ## Command line arguments
