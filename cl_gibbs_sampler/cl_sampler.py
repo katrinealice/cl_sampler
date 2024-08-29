@@ -503,21 +503,21 @@ def get_alms_from_gsm(freq, lmax, nside=64, resolution='low', output_model=False
     """
     return healpy2alms(get_healpy_from_gsm(freq, lmax, nside, resolution, output_model, output_map))
 
-def construct_rhs_no_rot(data, inv_noise_cov, inv_prior_cov, omega_0, omega_1, a_0, vis_response):
+def construct_rhs_no_rot(data, inv_noise_cov, inv_signal_cov, omega_0, omega_1, a_0, vis_response):
     
     real_data_term = vis_response.real.T @ (inv_noise_cov*data.real + np.sqrt(inv_noise_cov)*omega_1.real)
     imag_data_term = vis_response.imag.T @ (inv_noise_cov*data.imag + np.sqrt(inv_noise_cov)*omega_1.imag)
-    prior_term = inv_prior_cov*a_0 + np.sqrt(inv_prior_cov)*omega_0
+    prior_term = inv_signal_cov*a_0 + np.sqrt(inv_signal_cov)*omega_0
 
     right_hand_side = real_data_term + imag_data_term + prior_term 
     
     return right_hand_side
 
-def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_prior_cov, vis_response):
+def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_signal_cov, vis_response):
     
     real_noise_term = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) @ a_cr
     imag_noise_term = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) @ a_cr
-    signal_term = inv_prior_cov * a_cr
+    signal_term = inv_signal_cov * a_cr
     
     left_hand_side = (real_noise_term + imag_noise_term + signal_term) 
 
@@ -880,22 +880,22 @@ if __name__ == "__main__":
     data_noise = (np.random.randn(noise_cov.size) 
                   + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
     data_vec = model_true + data_noise
+    
+    # Define the inv_signal_cov before calling the LinearOperator function
+    inv_signal_cov = inv_prior_cov.copy()
 
     # RHS: Wiener filter solution to provide initial guess:
     omega_0_wf = np.zeros_like(a_0)
     omega_1_wf = np.zeros_like(model_true, dtype=np.complex128)
     rhs_wf = construct_rhs_no_rot(data_vec,
                                   inv_noise_cov, 
-                                  inv_prior_cov, 
+                                  inv_signal_cov, 
                                   omega_0_wf, 
                                   omega_1_wf, 
                                   a_0, 
                                   vis_response)
     
-    # LHS: Define the inv_signal_cov before calling the LinearOperator function
-    inv_signal_cov = inv_prior_cov.copy()
-
-    # Build linear operator object 
+    # LHS: Build linear operator object 
     lhs_shape = (rhs_wf.size, rhs_wf.size)
     lhs_linear_op = LinearOperator(matvec = lhs_operator,
                                        shape = lhs_shape)
