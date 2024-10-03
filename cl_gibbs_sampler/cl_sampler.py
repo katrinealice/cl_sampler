@@ -834,7 +834,7 @@ if __name__ == "__main__":
 
     # Frequency and reference frequency
     if ARGS['frequency']:
-        freqs = np.array(float(ARGS['frequency']*1e06)) # MHz -> Hz, required by Hydra
+        freqs = np.array([float(ARGS['frequency'])*1e06]) # MHz -> Hz, required by Hydra
         ref_freq = float(ARGS['frequency']) # MHz, required by PyGSM
     else:
         freqs = np.array([100e06]) # Hz, Hydra requires this

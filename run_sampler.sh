@@ -27,6 +27,7 @@ python -u $SCRIPT "$@" -dir=cl_3m_test \
                        -lmax=20\
                        -nside=128\
                        -NLST=10\
+                       -ferq=100.\
                        -lst_start=0.\
                        -lst_end=8.\
                        -dish_dia=3.\
