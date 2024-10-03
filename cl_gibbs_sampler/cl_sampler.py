@@ -855,8 +855,12 @@ if __name__ == "__main__":
         # defaults to HERA dishes
         dish_diameter = 14. # m
 
+    # Build the antenna array and output. 
     ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
+    ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)
+    np.savez(path+'ant_pos',**ant_dict)
+
     beams = [pyuvsim.AnalyticBeam('gaussian', diameter=dish_diameter) for ant in ants]
     freqs = np.array([100e6]) #(M)Hz
     lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
@@ -901,12 +905,10 @@ if __name__ == "__main__":
     a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
     _, ell_idx, _ = get_em_ell_idx(lmax) 
     
-    #TODO keep this for cl_sampler version?? 
-    ## setting the ell=0 mode to be the true value
-    #a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
+    # setting the ell=0 mode to be the true value
+    a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
     
-    
-    # Save a_0 in separate file
+    # Save a_0 in separate file as there has been issues with the combined .npz file
     np.savez(path+'a_0_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
     
     # Inverse noise covariance and noise on data
@@ -944,8 +946,30 @@ if __name__ == "__main__":
     # Time for all precomputations
     precomp_time = time.time()-start_time
     print(f'\nprecomputation took:\n{precomp_time} sec.\n')
+  
+    # Saving all precomputed data
+    np.savez(path+'precomputed_data_'+f'{data_seed}_'+f'{jobid}',
+             vis_response=vis_response,
+             autos=autos,
+             x_true=x_true,
+             inv_noise_cov=inv_noise_cov,
+             min_prior_std=min_prior_std,
+             inv_prior_cov=inv_prior_cov,
+             a_0=a_0,
+             data_seed=data_seed,
+             prior_seed=prior_seed,
+             incl_cosmic_var=incl_cosmic_var,
+             wf_soln=wf_soln,
+             nside=nside,
+             lmax=lmax,
+             ants=ants,
+             dish_diameter=dish_diameter,
+             freqs=freqs,
+             lsts_hours=lsts_hours,
+             precomp_time=precomp_time
+             )
+
     avg_iter_time = 0
-    
     # Get alm and cl samples
     for key in range(n_samples):
 
@@ -996,35 +1020,11 @@ if __name__ == "__main__":
     print(f'total_time:\n{total_time} sec.\n')
     print(f'All output saved in folder {path}\n')
     print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
- 
-    # Save a_0 (again) in separate file
-    np.savez(path+'a_0_end_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
    
-    # Saving all globally calculated data
-    np.savez(path+'precomputed_data_'+f'{data_seed}_'+f'{jobid}',
-             vis_response=vis_response,
-             autos=autos,
-             x_true=x_true,
-             inv_noise_cov=inv_noise_cov,
-             min_prior_std=min_prior_std,
-             inv_prior_cov=inv_prior_cov,
-             a_0=a_0,
-             data_seed=data_seed,
-             prior_seed=prior_seed,
-             incl_cosmic_var=incl_cosmic_var,
-             wf_soln=wf_soln,
-             nside=nside,
-             lmax=lmax,
-             ants=ants,
-             dish_diameter=dish_diameter,
-             freqs=freqs,
-             lsts_hours=lsts_hours,
+    np.savez(path+'timing_data_'+f'{data_seed}_'+f'{jobid}',
              precomp_time=precomp_time,
              avg_iter_time=avg_iter_time,
              total_time=total_time
             )
-    # creating a dictionary with string-keys as required by .npz files
-    ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)
-    np.savez(path+'ant_pos',**ant_dict)
-    
+   
     
