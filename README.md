@@ -26,6 +26,8 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 
 **nside**: The resolution used for HEALpy operations. If not provided, it defaults to 128.
 
+**frequency**: The frequency (in MHz) to sample for. Will also define the reference frequency for the true sky. If not provided, it defaults to 100 MHz.
+
 **NLST**: Specifices the number of LST timesteps. If not provided, it defaults to 10.
 
 **lst_start**: Specifies the start of the LST range in hours. If not provided, it defaults to 0 hr.
