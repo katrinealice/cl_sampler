@@ -144,7 +144,7 @@ def vis_proj_operator_no_rot(freqs, lsts, beams, ant_pos, lmax, nside, latitude=
     ell, m, vis_alm = hydra.vis_simulator.simulate_vis_per_alm(lmax=lmax, 
                                                                nside=nside, 
                                                                ants=ant_pos, 
-                                                               freqs=freqs, 
+                                                               freqs=np.atleast_1d(freqs), 
                                                                lsts=lsts, 
                                                                beams=beams,
                                                                latitude=latitude)
@@ -858,7 +858,7 @@ if __name__ == "__main__":
     ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
     beams = [pyuvsim.AnalyticBeam('gaussian', diameter=dish_diameter) for ant in ants]
-    freqs = np.linspace(100e6, 102e6, 2)
+    freqs = np.array([100e6]) #(M)Hz
     lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
     lsts = np.deg2rad((lsts_hours/24)*360) # in radian, used by HYDRA (and this code)
     delta_time = 60 # s
