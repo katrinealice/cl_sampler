@@ -73,6 +73,9 @@ AP.add_argument("-lmax", "--lmax", type=int, required=False,
 AP.add_argument("-nside", "--nside", type=int, required=False,
         help="the resolution given to HEALpy")
 
+AP.add_argument("-freq", "--frequency", type=float, required=False,
+        help="the frequency (MHz) to sample for, will default to 100 MHz") 
+
 AP.add_argument("-NLST", "--number_of_lst", type=int, required=False,
         help="int. Sets the number of LST timesteps. Defaults to 10")
 
@@ -792,7 +795,6 @@ if __name__ == "__main__":
         # If none is passed, default will be 20
         prior_seed = 20
 
-
     # Defining the jobid to distinguish multiple runs in one go
     if ARGS['jobid']: 
         jobid = int(ARGS['jobid'])
@@ -830,6 +832,14 @@ if __name__ == "__main__":
     else:
         nside = 128
 
+    # Frequency and reference frequency
+    if ARGS['frequency']:
+        freqs = np.array(float(ARGS['frequency']*1e06)) # MHz -> Hz, required by Hydra
+        ref_freq = float(ARGS['frequency']) # MHz, required by PyGSM
+    else:
+        freqs = np.array([100e06]) # Hz, Hydra requires this
+        ref_freq = 100. # MHz, PyGSM requires this 
+
     # NLST
     if ARGS['number_of_lst']:
         NLST = int(ARGS['number_of_lst'])
@@ -862,7 +872,6 @@ if __name__ == "__main__":
     np.savez(path+'ant_pos',**ant_dict)
 
     beams = [pyuvsim.AnalyticBeam('gaussian', diameter=dish_diameter) for ant in ants]
-    freqs = np.array([100e6]) #(M)Hz
     lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
     lsts = np.deg2rad((lsts_hours/24)*360) # in radian, used by HYDRA (and this code)
     delta_time = 60 # s
@@ -880,7 +889,7 @@ if __name__ == "__main__":
 
     # Setting the random seed to the prior_seed and calculating true sky
     np.random.seed(prior_seed)
-    x_true = get_alms_from_gsm(freq=100,lmax=lmax, nside=nside)
+    x_true = get_alms_from_gsm(freq=ref_freq,lmax=lmax, nside=nside)
     model_true = vis_response @ x_true
 
     # Inverse signal covariance 
