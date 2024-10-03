@@ -73,6 +73,18 @@ AP.add_argument("-lmax", "--lmax", type=int, required=False,
 AP.add_argument("-nside", "--nside", type=int, required=False,
         help="the resolution given to HEALpy")
 
+AP.add_argument("-NLST", "--number_of_lst", type=int, required=False,
+        help="int. Sets the number of LST timesteps. Defaults to 10")
+
+AP.add_argument("-lst_start", "--lst_start", type=float, required=False,
+        help="float. Defines start of LST range in hours. Defaults to 0 hr")
+
+AP.add_argument("-lst_end", "--lst_end", type=float, required=False,
+        help="float. Defines the end of LST range in hours. Defaults to 8 hr")
+
+AP.add_argument("-beam_dia", "--beam_diameter", type=float, required=False,
+        help="Sets the diameter of the dish/beam. Defaults to HERA-like 14.0 m")
+
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
 
@@ -788,6 +800,17 @@ if __name__ == "__main__":
         # if none is passed then don't change the keys
         jobid = 0
 
+    # Including cosmic variance into the prior variance:
+    if ARGS['cosmic_variance']:
+        if ARGS['cosmic_variance'].lower() in ('true', 'yes', 't', 'y', '1'):
+            incl_cosmic_var = True
+        elif ARGS['cosmic_variance'].lower() in ('false', 'no', 'f', 'n', '0'):
+            incl_cosmic_var = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
+    else:
+        incl_cosmic_var = False
+
     # Number of samples
     if ARGS['number_of_samples']:
         n_samples = int(ARGS['number_of_samples'])
@@ -807,23 +830,36 @@ if __name__ == "__main__":
     else:
         nside = 128
 
-    # Including cosmic variance into the prior variance:
-    if ARGS['cosmic_variance']:
-        if ARGS['cosmic_variance'].lower() in ('true', 'yes', 't', 'y', '1'):
-            incl_cosmic_var = True
-        elif ARGS['cosmic_variance'].lower() in ('false', 'no', 'f', 'n', '0'):
-            incl_cosmic_var = False
-        else:
-            raise argparse.ArgumentTypeError('Boolean value expected')
+    # NLST
+    if ARGS['number_of_lst']:
+        NLST = int(ARGS['number_of_lst'])
     else:
-        incl_cosmic_var = False
+        NLST = 10
+
+    # Start of lst range
+    if ARGS['lst_start']:
+        lst_start = float(ARGS['lst_start'])
+    else:
+        lst_start = 0. # hr
+
+    # End of lst range
+    if ARGS['lst_end']:
+        lst_end = float(ARGS['lst_end'])
+    else:
+        lst_end = 8. #hr
+
+    # diameter of beam / dish
+    if ARGS['beam_diameter']:
+        beam_diameter = float(ARGS['beam_diameter'])
+    else:
+        # defaults to HERA dishes
+        beam_diameter = 14. # m
 
     ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
-    beam_diameter = 14.
     beams = [pyuvsim.AnalyticBeam('gaussian', diameter=beam_diameter) for ant in ants]
     freqs = np.linspace(100e6, 102e6, 2)
-    lsts_hours = np.linspace(0.,8.,10)      # in hours for easy setting
+    lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
     lsts = np.deg2rad((lsts_hours/24)*360) # in radian, used by HYDRA (and this code)
     delta_time = 60 # s
     delta_freq = 1e+06 # (M)Hz
