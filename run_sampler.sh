@@ -29,6 +29,6 @@ python -u $SCRIPT "$@" -dir=cl_lmax_20 \
                        -NLST=10\
                        -lst_start=0.\
                        -lst_end=8.\
-                       -beam_dia=3.\
+                       -dish_dia=3.\
                        -cosmic_var=false \
                        -jobid=$SLURM_ARRAY_TASK_ID

@@ -82,8 +82,8 @@ AP.add_argument("-lst_start", "--lst_start", type=float, required=False,
 AP.add_argument("-lst_end", "--lst_end", type=float, required=False,
         help="float. Defines the end of LST range in hours. Defaults to 8 hr")
 
-AP.add_argument("-beam_dia", "--beam_diameter", type=float, required=False,
-        help="Sets the diameter of the dish/beam. Defaults to HERA-like 14.0 m")
+AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
+        help="Sets the diameter of the dish. Defaults to HERA-like 14.0 m")
 
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
@@ -848,16 +848,16 @@ if __name__ == "__main__":
     else:
         lst_end = 8. #hr
 
-    # diameter of beam / dish
-    if ARGS['beam_diameter']:
-        beam_diameter = float(ARGS['beam_diameter'])
+    # diameter of dish
+    if ARGS['dish_diameter']:
+        dish_diameter = float(ARGS['dish_diameter'])
     else:
         # defaults to HERA dishes
-        beam_diameter = 14. # m
+        dish_diameter = 14. # m
 
     ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
-    beams = [pyuvsim.AnalyticBeam('gaussian', diameter=beam_diameter) for ant in ants]
+    beams = [pyuvsim.AnalyticBeam('gaussian', diameter=dish_diameter) for ant in ants]
     freqs = np.linspace(100e6, 102e6, 2)
     lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
     lsts = np.deg2rad((lsts_hours/24)*360) # in radian, used by HYDRA (and this code)
@@ -1016,7 +1016,7 @@ if __name__ == "__main__":
              nside=nside,
              lmax=lmax,
              ants=ants,
-             beam_diameter=beam_diameter,
+             dish_diameter=dish_diameter,
              freqs=freqs,
              lsts_hours=lsts_hours,
              precomp_time=precomp_time,
