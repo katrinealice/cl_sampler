@@ -33,6 +33,8 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 
 **lst_end**: Spedifies the end of the LST range in hours. If not provided, it defaults to 8 hr. 
 
+**ant_distance**: The distance between the antennas in the hexagonal grid in metres. If not provided, it defaults to 14.6 m (HERA).
+
 **dish_diameter**: Specifies the width of the dishes in the array, defaults to HERA-like dishes of 14.0 m. 
 
 **cosmic_variance**: A boolean argument to include or exclude cosmic variance in the prior variance. If not provided, it defaults to False. 
