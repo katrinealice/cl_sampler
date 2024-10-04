@@ -85,6 +85,9 @@ AP.add_argument("-lst_start", "--lst_start", type=float, required=False,
 AP.add_argument("-lst_end", "--lst_end", type=float, required=False,
         help="float. Defines the end of LST range in hours. Defaults to 8 hr")
 
+AP.add_argument("-ant_dist", "--ant_distance", type=float, required=False,
+        help="The distance between the antennas in the hexagonal grid in metres. Defaults to 14.6 m (HERA)")
+
 AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
         help="Sets the diameter of the dish. Defaults to HERA-like 14.0 m")
 
@@ -858,6 +861,13 @@ if __name__ == "__main__":
     else:
         lst_end = 8. #hr
 
+    # distance between antennas
+    if ARGS['ant_distance']:
+        ant_distance = float(ARGS['ant_distance']) # m
+    else:
+        # defaults to HERA antenna distance
+        ant_distance = 14.6 # m
+
     # diameter of dish
     if ARGS['dish_diameter']:
         dish_diameter = float(ARGS['dish_diameter'])
@@ -866,7 +876,7 @@ if __name__ == "__main__":
         dish_diameter = 14. # m
 
     # Build the antenna array and output. 
-    ant_pos = build_hex_array(hex_spec=(3,4), d=14.6)  #builds array with (3,4,3) ants = 10 total
+    ant_pos = build_hex_array(hex_spec=(3,4), d=ant_distance)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
     ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)
     np.savez(path+'ant_pos',**ant_dict)
