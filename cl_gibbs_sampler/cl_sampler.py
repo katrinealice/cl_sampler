@@ -53,7 +53,7 @@ np.set_printoptions(threshold=sys.maxsize)
 AP = argparse.ArgumentParser()
 
 AP.add_argument("-dir", "--directory", required=False,
-   help="output directory")
+        help="output directory")
 
 AP.add_argument("-data_seed", "--data_seed", required=False,
         help="Int. Random seed for data noise")
@@ -62,7 +62,10 @@ AP.add_argument("-prior_seed", "--prior_seed", required=False,
         help="Int. Random seed for prior variance and mean")
 
 AP.add_argument("-jobid", "--jobid", required=False,
-   help="array job id")
+        help="array job id")
+
+AP.add_argument("-tol", "--tolerance", required=False,
+        help="Sets the tolerance for the conjugate gradient solver for the alm-samples")
 
 AP.add_argument("-nsamples", "--number_of_samples", type=int, required=False,
         help="Int. total number of samples")
@@ -583,7 +586,8 @@ def get_alm_samples(data_vec,
                     inv_signal_cov,
                     a_0,
                     vis_response,
-                    random_seed):
+                    random_seed,
+                    tolerance):
     """
     Function to draw samples from the GCR equation.
     """
@@ -615,7 +619,7 @@ def get_alm_samples(data_vec,
     time_start_solver = time.time()
     x_soln, convergence_info = solver(A = lhs_linear_op,
                                       b = rhs,
-                                      # tol = 1e-07,
+                                      tol = tolerance,
                                       maxiter = 15000,
                                       x0 = wf_soln) #TODO update initial guess?
     solver_time = time.time() - time_start_solver
@@ -691,6 +695,9 @@ def get_cl_samples(alms, lmax, random_seed):
 
     * lmax: (int)
         The lmax of the modes.
+
+    * random_seed: (int)
+        Sets the random seed for the specific function call
 
     Returns
     -------
@@ -804,6 +811,13 @@ if __name__ == "__main__":
     else:
         # if none is passed then don't change the keys
         jobid = 0
+
+    # Setting the tolerance for the conjugate gradient solver for the alm-samples
+    if ARGS['tolerance']:
+        tolerance = float(ARGS['tolerance'])
+    else:
+        # Defaults to the scipy/cg solver's default:
+        tolerance = 1e-05
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -960,7 +974,7 @@ if __name__ == "__main__":
     # Get the Wiener Filter solution for initial guess
     wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
                                           b = rhs_wf,
-                                          # tol = 1e-07,
+                                          tol = tolerance,
                                           maxiter = 15000)
     # Time for all precomputations
     precomp_time = time.time()-start_time
@@ -1004,7 +1018,8 @@ if __name__ == "__main__":
                                                  inv_signal_cov = inv_signal_cov,
                                                  a_0 = a_0,
                                                  vis_response = vis_response,
-                                                 random_seed = alm_random_seed)
+                                                 random_seed = alm_random_seed,
+                                                 tolerance=tolerance)
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,
