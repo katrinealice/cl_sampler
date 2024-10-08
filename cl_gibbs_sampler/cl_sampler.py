@@ -586,6 +586,7 @@ def get_alm_samples(data_vec,
                     inv_signal_cov,
                     a_0,
                     vis_response,
+                    initial_guess,
                     random_seed,
                     tolerance):
     """
@@ -621,7 +622,8 @@ def get_alm_samples(data_vec,
                                       b = rhs,
                                       tol = tolerance,
                                       maxiter = 15000,
-                                      x0 = wf_soln) #TODO update initial guess?
+                                      x0 = initial_guess) 
+
     solver_time = time.time() - time_start_solver
     iteration_time = time.time()-t_iter
             
@@ -976,6 +978,8 @@ if __name__ == "__main__":
                                           b = rhs_wf,
                                           tol = tolerance,
                                           maxiter = 15000)
+    initial_guess = wf_soln.copy()
+
     # Time for all precomputations
     precomp_time = time.time()-start_time
     print(f'\nprecomputation took:\n{precomp_time} sec.\n')
@@ -1002,6 +1006,7 @@ if __name__ == "__main__":
              precomp_time=precomp_time
              )
 
+
     avg_iter_time = 0
     # Get alm and cl samples
     for key in range(n_samples):
@@ -1017,9 +1022,12 @@ if __name__ == "__main__":
                                                  inv_noise_cov = inv_noise_cov,
                                                  inv_signal_cov = inv_signal_cov,
                                                  a_0 = a_0,
+                                                 initial_guess = initial_guess,
                                                  vis_response = vis_response,
                                                  random_seed = alm_random_seed,
                                                  tolerance=tolerance)
+        initial_guess = x_soln.copy()
+
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,
