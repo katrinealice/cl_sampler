@@ -24,6 +24,7 @@ python -u $SCRIPT "$@" -dir=cl_3m_test \
                        -nsamples=100 \
                        -data_seed=20 \
                        -prior_seed=30 \
+                       -tol=1e-07\
                        -lmax=20\
                        -nside=128\
                        -NLST=10\
