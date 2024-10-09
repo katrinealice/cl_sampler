@@ -538,9 +538,8 @@ def apply_lhs_no_rot(x, x_true, inv_noise_cov, inv_signal_cov, vis_response):
     
     # Fixing the monopole (a_00) to the true value
     real_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
-    a_cr = np.zeros_like(x_true)
-    a_cr[real_0_idx] = x_true[real_0_idx]
-    a_cr[~real_0_idx] = x
+    assert real_0_idx == 0, "the a_00 index should be == 0"
+    a_cr = np.concatenate(([x_true[real_0_idx]], x))
 
     # LHS of GCR equation
     real_noise_term = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) @ a_cr
