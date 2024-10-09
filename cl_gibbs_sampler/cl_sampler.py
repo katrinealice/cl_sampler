@@ -560,7 +560,7 @@ def lhs_operator(x):
 
     """
 
-    return apply_lhs_no_rot(x, inv_noise_cov, inv_signal_cov, vis_response)
+    return apply_lhs_no_rot(x, x_true, inv_noise_cov, inv_signal_cov, vis_response)
 
 def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, include_autos=False):
     nbls = len(ants)
