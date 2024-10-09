@@ -948,7 +948,7 @@ if __name__ == "__main__":
     #_, ell_idx, _ = get_em_ell_idx(lmax) 
     
     # setting the ell=0 mode to be the true value
-    real_0_idx, _ m= get_idx_ml(em=0, ell=0, lmax=lmax)
+    real_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
     a_0[real_0_idx] = x_true[real_0_idx]
     #a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
     
