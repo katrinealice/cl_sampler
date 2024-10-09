@@ -534,8 +534,15 @@ def construct_rhs_no_rot(data, inv_noise_cov, inv_signal_cov, omega_0, omega_1, 
     
     return right_hand_side
 
-def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_signal_cov, vis_response):
+def apply_lhs_no_rot(x, x_true, inv_noise_cov, inv_signal_cov, vis_response):
     
+    # Fixing the monopole (a_00) to the true value
+    real_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
+    a_cr = np.zeros_like(x_true)
+    a_cr[real_0_idx] = x_true[real_0_idx]
+    a_cr[~real_0_idx] = x
+
+    # LHS of GCR equation
     real_noise_term = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) @ a_cr
     imag_noise_term = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) @ a_cr
     signal_term = inv_signal_cov * a_cr
@@ -938,10 +945,12 @@ if __name__ == "__main__":
     
     # Set the prior mean by the prior variance 
     a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
-    _, ell_idx, _ = get_em_ell_idx(lmax) 
+    #_, ell_idx, _ = get_em_ell_idx(lmax) 
     
     # setting the ell=0 mode to be the true value
-    a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
+    real_0_idx, _ m= get_idx_ml(em=0, ell=0, lmax=lmax)
+    a_0[real_0_idx] = x_true[real_0_idx]
+    #a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
     
     # Save a_0 in separate file as there has been issues with the combined .npz file
     np.savez(path+'a_0_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
