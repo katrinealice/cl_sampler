@@ -920,8 +920,10 @@ if __name__ == "__main__":
     model_true = vis_response @ x_true
 
     # Inverse signal covariance 
+    ell_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
     min_prior_std = 0.5
     prior_cov = (0.1 * x_true)**2.
+    prior_cov[ell_0_idx] *= 0.1  # tighter constraints on the monopole 
     prior_cov[prior_cov < min_prior_std**2.] = min_prior_std**2.
 
     # Cosmic variance (if chosen)
@@ -939,12 +941,9 @@ if __name__ == "__main__":
     
     # Set the prior mean by the prior variance 
     a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
-    #_, ell_idx, _ = get_em_ell_idx(lmax) 
     
     # setting the ell=0 mode to be the true value
-    real_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
-    a_0[real_0_idx] = x_true[real_0_idx]
-    #a_0[np.where(np.array(ell_idx) == 0)[0][0]] = x_true[np.where(np.array(ell_idx) == 0)[0][0]]
+    a_0[ell_0_idx] = x_true[ell_0_idx]
     
     # Save a_0 in separate file as there has been issues with the combined .npz file
     np.savez(path+'a_0_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
