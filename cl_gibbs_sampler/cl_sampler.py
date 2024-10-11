@@ -923,7 +923,7 @@ if __name__ == "__main__":
     ell_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
     min_prior_std = 0.5
     prior_cov = (0.1 * x_true)**2.
-    prior_cov[ell_0_idx] *= 0.1  # tighter constraints on the monopole 
+    prior_cov[ell_0_idx] *= 0.01  # tighter constraints on the monopole 
     prior_cov[prior_cov < min_prior_std**2.] = min_prior_std**2.
 
     # Cosmic variance (if chosen)
