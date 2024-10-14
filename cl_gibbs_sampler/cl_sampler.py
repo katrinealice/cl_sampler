@@ -97,6 +97,9 @@ AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
 
+AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
+        help="change the constraint from the prior_variance on the monopole specifically. Float.")
+
 ARGS = vars(AP.parse_args())
 
 ## Functions
@@ -833,6 +836,13 @@ if __name__ == "__main__":
     else:
         incl_cosmic_var = False
 
+    # Include a tighter constraint on the monopole 
+    if ARGS['a_00_front_factor']:
+        a_00_front_factor = float(ARGS['a_00_front_factor'])
+    else:
+        # Default to not change the constraint on the monopole
+        a_00_front_factor = 1.
+
     # Number of samples
     if ARGS['number_of_samples']:
         n_samples = int(ARGS['number_of_samples'])
@@ -923,7 +933,7 @@ if __name__ == "__main__":
     ell_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
     min_prior_std = 0.5
     prior_cov = (0.1 * x_true)**2.
-    prior_cov[ell_0_idx] *= 0.01  # tighter constraints on the monopole 
+    prior_cov[ell_0_idx] *= a_00_front_factor  # tighter constraints on the monopole 
     prior_cov[prior_cov < min_prior_std**2.] = min_prior_std**2.
 
     # Cosmic variance (if chosen)
