@@ -1,5 +1,9 @@
 import os
 
+import cProfile
+import pstats
+import io
+
 import numpy as np
 import scipy as sp
 
@@ -63,6 +67,9 @@ AP.add_argument("-prior_seed", "--prior_seed", required=False,
 
 AP.add_argument("-jobid", "--jobid", required=False,
         help="array job id")
+
+AP.add_argument("-profile", "--profile", type=str, required=False,
+        help="Toggles whether cProfile is enabled, boolean")
 
 AP.add_argument("-tol", "--tolerance", required=False,
         help="Sets the tolerance for the conjugate gradient solver for the alm-samples")
@@ -818,6 +825,18 @@ if __name__ == "__main__":
         # if none is passed then don't change the keys
         jobid = 0
 
+    # enable/disable cProfile
+    if ARGS['profile']:
+        if ARGS['profile'].lower() in ('true', 'yes', 't', 'y', '1'):
+            profile = True
+        elif ARGS['profile'].lower() in ('false', 'no', 'f', 'n', '0'):
+            profile = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
+    else:
+        profile = False
+
+
     # Setting the tolerance for the conjugate gradient solver for the alm-samples
     if ARGS['tolerance']:
         tolerance = float(ARGS['tolerance'])
@@ -1021,6 +1040,11 @@ if __name__ == "__main__":
 
     avg_iter_time = 0
     # Get alm and cl samples
+    
+    if profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
+    
     for key in range(n_samples):
 
         sample_start_time = time.time()
@@ -1051,9 +1075,23 @@ if __name__ == "__main__":
                                           cl_samples = cl_samples,
                                           lmax = lmax)
         inv_signal_cov = 1/signal_cov
-
+            
         sample_total_time = time.time() - sample_start_time
         avg_iter_time += sample_total_time
+
+    if profile:
+        profiler.disable()
+        stream = io.StingIO()
+        stats = pstats.Stats(profiler, stream=stream)
+        stats.sort_stats('cummulative')
+        stats.print_stats()
+
+        profile_results = stream.getvalue()
+
+        # Prints to slurm output file:
+        print('cProfile output below: \n %%%%%%%%%%%%% \n')
+        print(profile_results)
+        print('\n %%%%%%%%%%%%%% end of cProfile output')
 
   
     ## Multiprocessing, getting the samples    
