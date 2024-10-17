@@ -862,8 +862,8 @@ if __name__ == "__main__":
     if ARGS['maxiter']:
         maxiter = int(ARGS['maxiter'])
     else:
-        # Defaults to scipys default; None
-        maxiter = None
+        # Defaults to 15000, this might not be enough depending on tolerance!
+        maxiter = 15000
 
 
     # Including cosmic variance into the prior variance:
