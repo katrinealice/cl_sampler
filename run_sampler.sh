@@ -19,17 +19,29 @@ SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 
 echo $@
 
+# set default output directory (will be overwritten if parsed as cmd-line arg)
+output_dir="cl_sampler"    # <------ change the directory name here or in cmd-line
+for arg in "$@"
+do
+    case $arg in 
+        -dir=*)
+        output_dir="${arg#*=}"
+        shift
+        ;;
+    esac
+done
+
 export OMP_NUM_THREADS=1 
-python -u $SCRIPT "$@" -dir=cl_sampler \
-                       -nsamples=2000 \
+python -u $SCRIPT "$@" -dir="$output_dir" \
+                       -nsamples=1 \
                        -data_seed=20 \
                        -prior_seed=30 \
                        -profile=false \
                        -tol=1e-07\
                        -maxiter=20000\
-                       -lmax=20\
+                       -lmax=4\
                        -nside=128\
-                       -NLST=10\
+                       -NLST=2\
                        -freq=400.\
                        -lst_start=0.\
                        -lst_end=8.\
@@ -38,3 +50,11 @@ python -u $SCRIPT "$@" -dir=cl_sampler \
                        -cosmic_var=false \
                        -front_factor=0.1 \
                        -jobid=$SLURM_ARRAY_TASK_ID
+
+# Save a copy of the shell script in the directory created by cl_sampler.py
+if [ -d "/cosma8/data/dp270/dc-glas1/$output_dir" ]; then
+    cp "$0" "/cosma8/data/dp270/dc-glas1/$output_dir/run_sampler.sh"
+else
+    echo "Error: output directory '$output_dir' does not exist"
+    exit 1
+fi
