@@ -1101,7 +1101,7 @@ if __name__ == "__main__":
         profiler.disable()
         stream = io.StringIO()
         stats = pstats.Stats(profiler, stream=stream)
-        stats.sort_stats('cummulative')
+        stats.sort_stats('cumulative')
         stats.print_stats()
 
         profile_results = stream.getvalue()
