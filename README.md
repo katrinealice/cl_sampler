@@ -7,8 +7,6 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 
 ## Current TODOs
 
-* #TODO update initial guess?
-* #TODO add more of the params as command line arguments
 
 ## Command line arguments
 **directory**: Specifies the output directory where the results will be saved. If not provided, it defaults to "output".
@@ -18,6 +16,12 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 **prior_seed**: Sets the random seed for the prior variance and prior mean. If not provided, it defaults to 20.
 
 **jobid**: Specifies the job ID to distinguish multiple runs. If not provided, it defaults to 0.
+
+**profile**: Toggles using cProfile to profile the Gibbs iteration. Remember to set nsamples=1. Defaults to false.
+
+**tol**: Sets the tolerance for the cg-solver. Defaults to 1e-05 (scipy default)
+
+**maxiter**: Int. Sets the number of iterations for the solver. Defaults to 20000 which is enough for a tol=1e-07.
 
 **number_of_samples**: Defines the number of samples to be generated. If not provided, it defaults to 100.
 
@@ -38,3 +42,5 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 **dish_diameter**: Specifies the width of the dishes in the array, defaults to HERA-like dishes of 14.0 m. 
 
 **cosmic_variance**: A boolean argument to include or exclude cosmic variance in the prior variance. If not provided, it defaults to False. 
+
+**front_factor**: Float. This is the front factor for the prior covariance for the monopole (a_00) mode. Defaults to 1 (i.e. no special treatment) 
