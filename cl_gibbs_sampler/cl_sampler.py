@@ -1,5 +1,9 @@
 import os
 
+import cProfile
+import pstats
+import io
+
 import numpy as np
 import scipy as sp
 
@@ -64,8 +68,14 @@ AP.add_argument("-prior_seed", "--prior_seed", required=False,
 AP.add_argument("-jobid", "--jobid", required=False,
         help="array job id")
 
+AP.add_argument("-profile", "--profile", type=str, required=False,
+        help="Toggles whether cProfile is enabled, boolean")
+
 AP.add_argument("-tol", "--tolerance", required=False,
         help="Sets the tolerance for the conjugate gradient solver for the alm-samples")
+
+AP.add_argument("-maxiter", "--maxiter", required=False,
+        help="Maximum number of iteration for the cg solver, defaults to None. Int")
 
 AP.add_argument("-nsamples", "--number_of_samples", type=int, required=False,
         help="Int. total number of samples")
@@ -537,14 +547,24 @@ def construct_rhs_no_rot(data, inv_noise_cov, inv_signal_cov, omega_0, omega_1, 
     
     return right_hand_side
 
-def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_signal_cov, vis_response):
-    
-    # LHS of GCR equation
-    real_noise_term = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) @ a_cr
-    imag_noise_term = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) @ a_cr
-    signal_term = inv_signal_cov * a_cr
-    
-    left_hand_side = (real_noise_term + imag_noise_term + signal_term) 
+def get_lhs_operators(vis_response, inv_noise_cov):
+    """
+    Pre-computes the LHS operator
+
+    """
+    real_op = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) 
+    imag_op = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) 
+
+    return real_op, imag_op
+ 
+
+def apply_lhs_no_rot(a_cr, real_op, imag_op, inv_signal_cov):
+    """
+    Applies the LHS operators to the alms, this function is to be used inside the sampler.
+    The real_op and imag_op are precomputed and parsed for computational efficiency.
+    the inv_signal_cov is updated for every sample.
+    """
+    left_hand_side = real_op @ a_cr + imag_op @ a_cr + inv_signal_cov * a_cr 
 
     return left_hand_side
 
@@ -557,7 +577,7 @@ def lhs_operator(x):
 
     """
 
-    return apply_lhs_no_rot(x, inv_noise_cov, inv_signal_cov, vis_response)
+    return apply_lhs_no_rot(x, real_op, imag_op, inv_signal_cov)
 
 def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, include_autos=False):
     nbls = len(ants)
@@ -590,6 +610,8 @@ def get_alm_samples(data_vec,
                     inv_signal_cov,
                     a_0,
                     vis_response,
+                    real_op,
+                    imag_op,
                     initial_guess,
                     random_seed,
                     tolerance):
@@ -625,7 +647,7 @@ def get_alm_samples(data_vec,
     x_soln, convergence_info = solver(A = lhs_linear_op,
                                       b = rhs,
                                       tol = tolerance,
-                                      maxiter = 15000,
+                                      maxiter = maxiter,
                                       x0 = initial_guess) 
 
     solver_time = time.time() - time_start_solver
@@ -818,12 +840,31 @@ if __name__ == "__main__":
         # if none is passed then don't change the keys
         jobid = 0
 
+    # enable/disable cProfile
+    if ARGS['profile']:
+        if ARGS['profile'].lower() in ('true', 'yes', 't', 'y', '1'):
+            profile = True
+        elif ARGS['profile'].lower() in ('false', 'no', 'f', 'n', '0'):
+            profile = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
+    else:
+        profile = False
+
     # Setting the tolerance for the conjugate gradient solver for the alm-samples
     if ARGS['tolerance']:
         tolerance = float(ARGS['tolerance'])
     else:
         # Defaults to the scipy/cg solver's default:
         tolerance = 1e-05
+
+    # The maximum number of iterations allowed for the cg_solver
+    if ARGS['maxiter']:
+        maxiter = int(ARGS['maxiter'])
+    else:
+        # Defaults to 15000, this might not be enough depending on tolerance!
+        maxiter = 15000
+
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -916,6 +957,7 @@ if __name__ == "__main__":
     latitude = 30.7215 * np.pi / 180  # HERA loc in decimal numbers ## There's some sign error in the code, so this missing sign is a quick fix
     solver = cg
 
+    # Precompute the visibility reponse operator
     vis_response, autos, ell, m = vis_proj_operator_no_rot(freqs=freqs, 
                                                         lsts=lsts, 
                                                         beams=beams, 
@@ -965,7 +1007,10 @@ if __name__ == "__main__":
     data_noise = (np.random.randn(noise_cov.size) 
                   + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
     data_vec = model_true + data_noise
-    
+
+    # Pre-compute the LHS operators, needs defining before the LinearOperator function
+    real_op, imag_op = get_lhs_operators(vis_response=vis_response, inv_noise_cov=inv_noise_cov) 
+
     # Define the inv_signal_cov before calling the LinearOperator function
     inv_signal_cov = inv_prior_cov.copy()
 
@@ -989,7 +1034,7 @@ if __name__ == "__main__":
     wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
                                           b = rhs_wf,
                                           tol = tolerance,
-                                          maxiter = 15000)
+                                          maxiter = maxiter)
     initial_guess = wf_soln.copy()
 
     # Time for all precomputations
@@ -1021,6 +1066,11 @@ if __name__ == "__main__":
 
     avg_iter_time = 0
     # Get alm and cl samples
+    
+    if profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
+    
     for key in range(n_samples):
 
         sample_start_time = time.time()
@@ -1036,6 +1086,8 @@ if __name__ == "__main__":
                                                  a_0 = a_0,
                                                  initial_guess = initial_guess,
                                                  vis_response = vis_response,
+                                                 real_op = real_op,
+                                                 imag_op = imag_op,
                                                  random_seed = alm_random_seed,
                                                  tolerance=tolerance)
         initial_guess = x_soln.copy()
@@ -1051,9 +1103,23 @@ if __name__ == "__main__":
                                           cl_samples = cl_samples,
                                           lmax = lmax)
         inv_signal_cov = 1/signal_cov
-
+            
         sample_total_time = time.time() - sample_start_time
         avg_iter_time += sample_total_time
+
+    if profile:
+        profiler.disable()
+        stream = io.StringIO()
+        stats = pstats.Stats(profiler, stream=stream)
+        stats.sort_stats('cumulative')
+        stats.print_stats()
+
+        profile_results = stream.getvalue()
+
+        # Prints to slurm output file:
+        print('cProfile output below: \n %%%%%%%%%%%%% \n')
+        print(profile_results)
+        print('\n %%%%%%%%%%%%%% end of cProfile output')
 
   
     ## Multiprocessing, getting the samples    
@@ -1081,4 +1147,3 @@ if __name__ == "__main__":
              total_time=total_time
             )
    
-    
