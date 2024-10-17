@@ -15,7 +15,7 @@ source ~/.bashrc
 conda deactivate
 conda activate hera_sim
 
-SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler_op.py"
+SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 
 echo $@
 
