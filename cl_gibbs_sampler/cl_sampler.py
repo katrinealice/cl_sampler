@@ -862,8 +862,8 @@ if __name__ == "__main__":
     if ARGS['maxiter']:
         maxiter = int(ARGS['maxiter'])
     else:
-        # Defaults to 20000, but rememeber to check convergence_info!
-        maxiter = 20000
+        # Defaults to 30000, but rememeber to check convergence_info!
+        maxiter = 30000
 
 
     # Including cosmic variance into the prior variance:

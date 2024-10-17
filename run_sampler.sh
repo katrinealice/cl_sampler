@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time 04:00:00
+#SBATCH --time 06:00:00
 #SBATCH --mem 64G
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
@@ -32,24 +32,25 @@ do
 done
 
 export OMP_NUM_THREADS=1 
-python -u $SCRIPT "$@" -dir="$output_dir" \
-                       -nsamples=4000 \
-                       -data_seed=20 \
-                       -prior_seed=30 \
-                       -profile=false \
-                       -tol=1e-07\
-                       -maxiter=20000\
-                       -lmax=20\
-                       -nside=128\
-                       -NLST=10\
-                       -freq=400.\
-                       -lst_start=0.\
-                       -lst_end=8.\
-                       -ant_dist=1.5\
-                       -dish_dia=1.\
-                       -cosmic_var=false \
-                       -front_factor=0.1 \
-                       -jobid=$SLURM_ARRAY_TASK_ID
+python -u $SCRIPT -dir="$output_dir" \
+                  -nsamples=4000 \
+                  -data_seed=20 \
+                  -prior_seed=30 \
+                  -profile=false \
+                  -tol=1e-07\
+                  -maxiter=30000\
+                  -lmax=20\
+                  -nside=128\
+                  -NLST=10\
+                  -freq=400.\
+                  -lst_start=0.\
+                  -lst_end=8.\
+                  -ant_dist=1.5\
+                  -dish_dia=1.\
+                  -cosmic_var=false \
+                  -front_factor=0.1 \
+                  -jobid=$SLURM_ARRAY_TASK_ID \
+                  "$@"
 
 # Save a copy of the shell script in the directory created by cl_sampler.py
 if [ -d "/cosma8/data/dp270/dc-glas1/$output_dir" ]; then
