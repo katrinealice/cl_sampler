@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time 48:00:00
+#SBATCH --time 04:00:00
 #SBATCH --mem 64G
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
