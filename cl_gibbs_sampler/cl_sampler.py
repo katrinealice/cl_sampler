@@ -544,14 +544,24 @@ def construct_rhs_no_rot(data, inv_noise_cov, inv_signal_cov, omega_0, omega_1, 
     
     return right_hand_side
 
-def apply_lhs_no_rot(a_cr, inv_noise_cov, inv_signal_cov, vis_response):
-    
-    # LHS of GCR equation
-    real_noise_term = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) @ a_cr
-    imag_noise_term = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) @ a_cr
-    signal_term = inv_signal_cov * a_cr
-    
-    left_hand_side = (real_noise_term + imag_noise_term + signal_term) 
+def get_lhs_operators(vis_response, inv_noise_cov):
+    """
+    Pre-computes the LHS operator
+
+    """
+    real_op = vis_response.real.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.real ) 
+    imag_op = vis_response.imag.T @ ( inv_noise_cov[:,np.newaxis]* vis_response.imag ) 
+
+    return real_op, imag_op
+ 
+
+def apply_lhs_no_rot(a_cr, real_op, imag_op, inv_signal_cov):
+    """
+    Applies the LHS operators to the alms, this function is to be used inside the sampler.
+    The real_op and imag_op are precomputed and parsed for computational efficiency.
+    the inv_signal_cov is updated for every sample.
+    """
+    left_hand_side = real_op @ a_cr + imag_op @ a_cr + inv_signal_cov * a_cr 
 
     return left_hand_side
 
@@ -564,7 +574,7 @@ def lhs_operator(x):
 
     """
 
-    return apply_lhs_no_rot(x, inv_noise_cov, inv_signal_cov, vis_response)
+    return apply_lhs_no_rot(x, real_op, imag_op, inv_signal_cov)
 
 def radiometer_eq(auto_visibilities, ants, delta_time, delta_freq, Nnights = 1, include_autos=False):
     nbls = len(ants)
@@ -597,6 +607,8 @@ def get_alm_samples(data_vec,
                     inv_signal_cov,
                     a_0,
                     vis_response,
+                    real_op,
+                    imag_op,
                     initial_guess,
                     random_seed,
                     tolerance):
@@ -935,6 +947,7 @@ if __name__ == "__main__":
     latitude = 30.7215 * np.pi / 180  # HERA loc in decimal numbers ## There's some sign error in the code, so this missing sign is a quick fix
     solver = cg
 
+    # Precompute the visibility reponse operator
     vis_response, autos, ell, m = vis_proj_operator_no_rot(freqs=freqs, 
                                                         lsts=lsts, 
                                                         beams=beams, 
@@ -984,7 +997,10 @@ if __name__ == "__main__":
     data_noise = (np.random.randn(noise_cov.size) 
                   + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
     data_vec = model_true + data_noise
-    
+
+    # Pre-compute the LHS operators, needs defining before the LinearOperator function
+    real_op, imag_op = get_lhs_operators(vis_response=vis_response, inv_noise_cov=inv_noise_cov) 
+
     # Define the inv_signal_cov before calling the LinearOperator function
     inv_signal_cov = inv_prior_cov.copy()
 
@@ -1060,6 +1076,8 @@ if __name__ == "__main__":
                                                  a_0 = a_0,
                                                  initial_guess = initial_guess,
                                                  vis_response = vis_response,
+                                                 real_op = real_op,
+                                                 imag_op = imag_op,
                                                  random_seed = alm_random_seed,
                                                  tolerance=tolerance)
         initial_guess = x_soln.copy()
@@ -1081,7 +1099,7 @@ if __name__ == "__main__":
 
     if profile:
         profiler.disable()
-        stream = io.StingIO()
+        stream = io.StringIO()
         stats = pstats.Stats(profiler, stream=stream)
         stats.sort_stats('cummulative')
         stats.print_stats()
