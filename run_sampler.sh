@@ -33,15 +33,15 @@ done
 
 export OMP_NUM_THREADS=1 
 python -u $SCRIPT "$@" -dir="$output_dir" \
-                       -nsamples=1 \
+                       -nsamples=4000 \
                        -data_seed=20 \
                        -prior_seed=30 \
                        -profile=false \
                        -tol=1e-07\
                        -maxiter=20000\
-                       -lmax=4\
+                       -lmax=20\
                        -nside=128\
-                       -NLST=2\
+                       -NLST=10\
                        -freq=400.\
                        -lst_start=0.\
                        -lst_end=8.\
