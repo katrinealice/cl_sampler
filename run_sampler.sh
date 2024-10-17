@@ -20,7 +20,7 @@ SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 echo $@
 
 # set default output directory (will be overwritten if parsed as cmd-line arg)
-output_dir="cl_sampler"    # <------ change the directory name here or in cmd-line
+output_dir="output"    # <------ change the directory name here or in cmd-line
 for arg in "$@"
 do
     case $arg in 
