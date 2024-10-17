@@ -74,6 +74,9 @@ AP.add_argument("-profile", "--profile", type=str, required=False,
 AP.add_argument("-tol", "--tolerance", required=False,
         help="Sets the tolerance for the conjugate gradient solver for the alm-samples")
 
+AP.add_argument("-maxiter", "maxiter", required=False,
+        help="Maximum number of iteration for the cg solver, defaults to None. Int")
+
 AP.add_argument("-nsamples", "--number_of_samples", type=int, required=False,
         help="Int. total number of samples")
 
@@ -644,7 +647,7 @@ def get_alm_samples(data_vec,
     x_soln, convergence_info = solver(A = lhs_linear_op,
                                       b = rhs,
                                       tol = tolerance,
-                                      maxiter = 15000,
+                                      maxiter = maxiter,
                                       x0 = initial_guess) 
 
     solver_time = time.time() - time_start_solver
@@ -848,13 +851,20 @@ if __name__ == "__main__":
     else:
         profile = False
 
-
     # Setting the tolerance for the conjugate gradient solver for the alm-samples
     if ARGS['tolerance']:
         tolerance = float(ARGS['tolerance'])
     else:
         # Defaults to the scipy/cg solver's default:
         tolerance = 1e-05
+
+    # The maximum number of iterations allowed for the cg_solver
+    if ARGS['maxiter']:
+        maxiter = int(ARGS['maxiter'])
+    else:
+        # Defaults to scipys default; None
+        maxiter = None
+
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -1024,7 +1034,7 @@ if __name__ == "__main__":
     wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
                                           b = rhs_wf,
                                           tol = tolerance,
-                                          maxiter = 15000)
+                                          maxiter = maxiter)
     initial_guess = wf_soln.copy()
 
     # Time for all precomputations
@@ -1137,4 +1147,3 @@ if __name__ == "__main__":
              total_time=total_time
             )
    
-    
