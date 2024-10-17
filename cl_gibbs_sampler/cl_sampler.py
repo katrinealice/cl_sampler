@@ -74,7 +74,7 @@ AP.add_argument("-profile", "--profile", type=str, required=False,
 AP.add_argument("-tol", "--tolerance", required=False,
         help="Sets the tolerance for the conjugate gradient solver for the alm-samples")
 
-AP.add_argument("-maxiter", "maxiter", required=False,
+AP.add_argument("-maxiter", "--maxiter", required=False,
         help="Maximum number of iteration for the cg solver, defaults to None. Int")
 
 AP.add_argument("-nsamples", "--number_of_samples", type=int, required=False,
