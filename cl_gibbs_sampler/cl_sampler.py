@@ -824,12 +824,53 @@ def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
     * nu_ref (float)
         The reference frequency in Hz
 
+    
+    Returns
+    -------
+    * (float)
+        The frequency-part (i.e. the powerlaw) of the Cl's, to be diagonalised. 
     """
 
     beta = params[2]
     xi = params[3]
 
     return ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
+
+def get_cl_eigenmode(params, ell, ell_ref, eigenvalue):
+    """
+    Function to get the n'th Cl component given a specific eigenmode. See Alonso et al 2014.
+
+    Parameters
+    ----------
+    * params (list (floats))
+        A list of all the input parameters ordered as A, alpha, beta, xi.
+        Note: beta and xi are not used here, but this ordering was kept for ease of use with the
+        other equations in this algorithm.
+
+    * ell (integer)
+        The given ell-value of the spherical harmonic mode.
+
+    * ell_ref (integer)
+        The reference value that the Cl-model is defined for.
+
+    * eigenvalue (float)
+        The real part of the eigenvalues from the diagonalisation of the cl-model. 
+
+
+    Returns
+    -------
+    * Cl_n (float)
+        The Cl-value for the specific eigenmode
+
+    """
+
+    A = params[0]
+    alpha = params[1]
+
+    Cl_n = A*(ell/ell_ref)**alpha * eigenvalue
+
+    return Cl_n
+
 
 
 ###### MAIN ######    
