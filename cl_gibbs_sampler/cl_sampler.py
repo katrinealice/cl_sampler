@@ -801,6 +801,36 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
 
     return signal_cov
 
+def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
+    """
+    Based on Cl(nu1,nu2) model from Santos et al 2005. Here it is used for the RSB excess component. 
+    Note that this model is not defined for ell=0, see get_monopole() for this mode. 
+    This is the first step of the algorithm in Alonso et al 2014 - i.e. the matrix to 
+    diagonalise.
+
+    Parameters
+    ----------
+    * params (list (floats))
+        A list of all the input parameters ordered as A, alpha, beta, xi.
+        Note: A and alpha are not used here, but this ordering was kept for ease of use with the
+        other equations in this algorithm.
+
+    * nu1 (float)
+        The first frequency in Hz
+
+    * nu2 (float)
+        The second frequency in Hz
+
+    * nu_ref (float)
+        The reference frequency in Hz
+
+    """
+
+    beta = params[2]
+    xi = params[3]
+
+    return ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
+
 
 ###### MAIN ######    
 if __name__ == "__main__":
