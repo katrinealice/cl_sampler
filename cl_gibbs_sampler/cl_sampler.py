@@ -801,12 +801,11 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
 
     return signal_cov
 
-def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
+def diagonalise_cl_model(params, freq_list, nu_ref):
     """
     Based on Cl(nu1,nu2) model from Santos et al 2005. Here it is used for the RSB excess component. 
     Note that this model is not defined for ell=0, see get_monopole() for this mode. 
-    This is the first step of the algorithm in Alonso et al 2014 - i.e. the matrix to 
-    diagonalise.
+    This is the first step of the algorithm in Alonso et al 2014 - i.e. diagonalising the Cl/(A[ell/ell_ref]^alpha)
 
     Parameters
     ----------
@@ -815,11 +814,8 @@ def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
         Note: A and alpha are not used here, but this ordering was kept for ease of use with the
         other equations in this algorithm.
 
-    * nu1 (float)
-        The first frequency in Hz
-
-    * nu2 (float)
-        The second frequency in Hz
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
 
     * nu_ref (float)
         The reference frequency in Hz
@@ -827,14 +823,31 @@ def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
     
     Returns
     -------
-    * (float)
-        The frequency-part (i.e. the powerlaw) of the Cl's, to be diagonalised. 
+    * eigenvalues (ndarray (complex128))
+        All the eigenvalues of the cl-model
+
+    * eigenvectors (ndarray (complex128))
+        All the eigenvectors of the cl-model
+
     """
 
     beta = params[2]
     xi = params[3]
 
-    return ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
+    nfreqs = len(freq_list)
+
+    diag_cl_model = np.zeros(shape=(nfreqs,nfreqs))
+
+    for i, nu1 in enumerate(freq_list):
+        for j, nu2 in enumerate(freq_list):
+            diag_cl_model[i,j] = ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
+
+    eigenvalues, eigenvectors = np.linalg.eig(diag_cl_model)
+    eig_idx = np.argsort(eigenvalues)[::-1]
+    eigenvalues = eigenvalues[eig_idx]
+    eigenectors = eigenvectors[eig_idx]
+
+    return eigenvalues, eigenvectors
 
 def extract_nonzero_eigenvalues(eigenvalues):
     """
@@ -861,9 +874,6 @@ def extract_nonzero_eigenvalues(eigenvalues):
     eigenvalues_real = eigenvalues.real[eigenvalues_idx]
 
     return eigenvalues_real, eigenvalues_idx
-
-
-
 
 
 def get_cl_eigenmode(params, ell, ell_ref, eigenvalue):
