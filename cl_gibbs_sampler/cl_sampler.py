@@ -836,6 +836,36 @@ def get_cl_model_powerlaw(params, nu1, nu2, nu_ref):
 
     return ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
 
+def extract_nonzero_eigenvalues(eigenvalues):
+    """
+    Function to assert that the imaginary part of the eigenvalues is zero and only
+    return the non-zero real parts along with their list indices.
+
+    Parameters
+    ----------
+    * eigenvalues (ndarray (complex128))
+        Array of the eigenvalues of the cl-model
+
+    Returns
+    -------
+    * eigenvalues_real (ndarray (floats))
+        The non-zero real-parts of the eigenvalues
+
+    * eigenvalues_idx (ndarray (int))
+        List of the indices of the non-zero eigenvalues
+    """
+
+    assert np.all(np.isclose(eigenvalues.imag, 0)), 'there are non-zero imaginary parts in the eigenvalues of the Cls'
+
+    eigenvalues_idx = np.where(~np.isclose(eigenvalues.real,0))[0]
+    eigenvalues_real = eigenvalues.real[eigenvalues_idx]
+
+    return eigenvalues_real, eigenvalues_idx
+
+
+
+
+
 def get_cl_eigenmode(params, ell, ell_ref, eigenvalue):
     """
     Function to get the n'th Cl component given a specific eigenmode. See Alonso et al 2014.
