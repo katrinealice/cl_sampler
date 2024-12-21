@@ -680,7 +680,7 @@ def get_sigma_ell(alms,lmax):
     * alms: (ndarray (floats))
         The array represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
-        The first hald is the real values.
+        The first half is the real values.
 
     * lmax: (int)
         The lmax of the modes.
@@ -719,7 +719,7 @@ def get_cl_samples(alms, lmax, random_seed):
     * alms: (ndarray (floats))
         The array (shape=((lmax+1)**2)) represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
-        The first hald is the real values.
+        The first half is the real values.
 
     * lmax: (int)
         The lmax of the modes.
@@ -869,7 +869,8 @@ def extract_nonzero_eigenvalues(eigenvalues):
         List of the indices of the non-zero eigenvalues
     """
 
-    assert np.all(np.isclose(eigenvalues.imag, 0)), 'there are non-zero imaginary parts in the eigenvalues of the Cls'
+    assert np.all(np.isclose(eigenvalues.imag, 0)), \
+            'there are non-zero imaginary parts in the eigenvalues of the Cls'
 
     eigenvalues_idx = np.where(~np.isclose(eigenvalues.real,0))[0]
     eigenvalues_real = eigenvalues.real[eigenvalues_idx]
@@ -877,7 +878,7 @@ def extract_nonzero_eigenvalues(eigenvalues):
     return eigenvalues_real, eigenvalues_idx
 
 
-def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
+def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref, eigenvalues):
     """
     Uses hp.synalm to generate alms from the Cls calculated as 
     the n'th Cl component given a specific eigenmode. See Alonso et al 2014
@@ -887,8 +888,13 @@ def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
     ----------
     * params (list (floats))
         A list of all the input fiducial parameters ordered as A, alpha, beta, xi.
-        Note: beta and xi are not used here, but this ordering was kept for ease of use with the
-        other equations in this algorithm.
+        Note: beta and xi are not used directly here, but is still parsed to subroutines. 
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * nu_ref (float)
+        The reference frequency in Hz
 
     * lmax (integer)
         The maximum ell-value for the spherical harmonics 
@@ -911,7 +917,11 @@ def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
     A = params[0]
     alpha = params[1]
 
-    nonzero_eigenvalues, eigenvalues_idx = extract_nonzero_eigenvalues(eigenvalues)
+    eigenvalues, eigenvectors = diagonalise_cl_model(params=params,
+                                                     freq_list=freq_list,
+                                                     nu_ref=nu_ref)
+ 
+    nonzero_eigenvalues, eigenvalues_idx = extract_nonzero_eigenvalues(eigenvalues=eigenvalues)
 
     Cl_n = np.zeros(shape=(eigenvalues_idx.size, lmax+1))
     alm_n = np.zeros(shape=(eigenvalues_idx.size, (lmax+1)*((lmax+1)+1)//2),
@@ -942,10 +952,10 @@ def get_monopole(monopole_params, freq_list, nu_ref):
         A list of parameters ordered as T_cmb, T_background, beta
 
     * freq_list (ndarray (floats))
-        An array of the frequencies used for the entire sample range
+        An array of the frequencies in Hz
 
     * nu_ref (float)
-        The reference frequency 
+        The reference frequency in Hz
 
     Returns:
     --------
@@ -961,6 +971,57 @@ def get_monopole(monopole_params, freq_list, nu_ref):
     monopole = T_cmb + T_background*(freq_list/nu_ref)**beta
 
     return monopole
+
+def RSB_data_model(freq_list, lmax):
+    """
+    Generates a set of alms for the RSB model given in Zhang et al 2024 and with
+    a monopole term defined by Dowell and Taylor 2018. The alms are generated to
+    be consistent with the Cl(nu,nu') through the algorithm in Alonso et al 2014.
+    The parameters for the RSB excess and monopole terms have been rescaled to
+    fit the same reference frequency of 400 MHz.
+
+    Parameters:
+    -----------
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * lmax (integer)
+        The maximum ell-value for the spherical harmonics 
+
+    Returns:
+    --------
+    * RSB_alms (ndarray (floats))
+        The generated flattened alms.
+        The array represents all postive (+m) modes including zero
+        and has double length, as real and imaginary values are split.
+        The first half is the real values.
+
+   
+    """
+    
+    ell_ref = 10
+    nu_ref = 400*1e06 # Hz
+    
+    # Parameters corresponding to RSB2 in Zhang et el 2024. Amplitude has been
+    # adjusted to a reference frequency of 400 MHz
+    RSB_params = [0.106**2, -3.0, -2.66, 4.0] # A (K^2), alpha, beta, xi
+
+    # Monopole parameters (Dowell&Taylor 2018). Background temperature (amplitude)
+    # has been adjusted to a reference frequency of 400 MHz
+    monopole_params = [2.722, 2.239, -2.58] # T_cmb (K), T_background (K), beta
+
+    RSB_hp = get_alms_fiducial(params=RSB_params,
+                               freq_list=freq_list,
+                               nu_ref = nu_ref,
+                               lmax=lmax,
+                               ell_ref=ell_ref)
+
+    RSB_hp[:,0] = get_monopole(monopole_params, freq_list, nu_ref)
+
+    RSB_alms = healpy2alms(RSB_hp)
+
+    return RSB_alms
 
 ###### MAIN ######    
 if __name__ == "__main__":
