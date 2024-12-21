@@ -896,13 +896,13 @@ def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
     * ell_ref (integer)
         The reference value that the Cl-model is defined for.
 
-    * eigenvalues (array (complex128))
+    * eigenvalues (ndarray (complex128))
         The eigenvalues from the diagonalisation of the cl-model. 
 
 
     Returns
     -------
-    * alms_fiducial (array (floats)
+    * alms_fiducial (ndarray (floats)
         The synthetic alms corresponsing to the Cl_n for the contributing eigenmodes
         given the fiducial parameters
 
@@ -930,7 +930,37 @@ def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
 
     return alms_fiducial
 
+def get_monopole(monopole_params, freq_list, nu_ref):
+    """
+    A power law model for the monopole term given the temperature of the cmb and
+    the background and its spectral index beta.
 
+    Parameters:
+    -----------
+
+    * monopole_params (list (floats))
+        A list of parameters ordered as T_cmb, T_background, beta
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies used for the entire sample range
+
+    * nu_ref (float)
+        The reference frequency 
+
+    Returns:
+    --------
+
+    * monopole (ndarray (floats))
+        The monopole term for all the frequencies
+
+    """
+    T_cmb = monopole_params[0]
+    T_background = monopole_params[1]
+    beta = monopole_params[2]
+
+    monopole = T_cmb + T_background*(freq_list/nu_ref)**beta
+
+    return monopole
 
 ###### MAIN ######    
 if __name__ == "__main__":
