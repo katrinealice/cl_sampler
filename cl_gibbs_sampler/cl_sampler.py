@@ -1086,6 +1086,16 @@ if __name__ == "__main__":
         # Defaults to 30000, but rememeber to check convergence_info!
         maxiter = 30000
 
+    # Including RSB excess signal in the data model:
+    if ARGS['include_RSB']:
+        if ARGS['include_RSB'].lower() in ('true', 'yes', 't', 'y', '1'):
+            incl_RSB = True
+        elif ARGS['include_RSB'].lower() in ('false', 'no', 'f', 'n', '0'):
+            incl_RSB = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected for include_RSB')
+    else:
+        incl_RSB = False
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -1124,13 +1134,24 @@ if __name__ == "__main__":
     else:
         nside = 128
 
-    # Frequency and reference frequency
+    # Frequency (in Hz) and pygsm frequency (in MHz) 
+    # TODO: this is a remnant from when it was a multifrequency instead of 
+    # per frequency code. Consider changing this.  
     if ARGS['frequency']:
         freqs = np.array([float(ARGS['frequency'])*1e06]) # MHz -> Hz, required by Hydra
         ref_freq = float(ARGS['frequency']) # MHz, required by PyGSM
     else:
         freqs = np.array([100e06]) # Hz, Hydra requires this
         ref_freq = 100. # MHz, PyGSM requires this 
+
+    # Sets the frequency list for the RSB data model. Includes both ends of range.
+    if ARGS['freq_bounds']:
+        freq_start = float(ARGS['freq_bounds'][0])
+        freq_stop = float(ARGS['freq_bounds'][1])
+        freq_step = float(ARGS['freq_bounds'][2])
+        freq_list = np.arange(start, stop+step, step)*1e06 # MHz -> Hz
+    else:
+        freq_list = None
 
     # NLST
     if ARGS['number_of_lst']:
@@ -1190,6 +1211,28 @@ if __name__ == "__main__":
     # Setting the random seed to the prior_seed and calculating true sky
     np.random.seed(prior_seed)
     x_true = get_alms_from_gsm(freq=ref_freq,lmax=lmax, nside=nside)
+
+    if include_RSB = True:
+        assert np.any(freq_list != None), \
+                "To include RSB excess you must define the bounds of the full \
+                frequency list in freq_bounds"
+        
+        freq_idx = np.zeros(shape=len(freqs))
+        for i, frequency in enumerate(freqs):
+            assert np.any(frequency == freq_list), \
+                    "The frequency(ies) is(are) not represented by the frequency list \
+                    given by freq_bounds"
+
+            # Extract index of the matching frequency for RSB alm picking
+            freq_idx[i] = np.argwhere(frequency==freq_list)[0][0]  
+
+        x_true += RSB_alms(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
+        print("RSB excess is included in the data model")
+
+    else:
+        print("RSB excess has not been included in the data model")
+
+    # Combined data model
     model_true = vis_response @ x_true
 
     # Inverse signal covariance 
