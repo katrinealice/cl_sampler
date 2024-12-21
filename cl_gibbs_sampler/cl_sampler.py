@@ -842,6 +842,7 @@ def diagonalise_cl_model(params, freq_list, nu_ref):
         for j, nu2 in enumerate(freq_list):
             diag_cl_model[i,j] = ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
 
+    # Diagonalise the Cl-model
     eigenvalues, eigenvectors = np.linalg.eig(diag_cl_model)
     eig_idx = np.argsort(eigenvalues)[::-1]
     eigenvalues = eigenvalues[eig_idx]
@@ -876,40 +877,58 @@ def extract_nonzero_eigenvalues(eigenvalues):
     return eigenvalues_real, eigenvalues_idx
 
 
-def get_cl_eigenmode(params, ell, ell_ref, eigenvalue):
+def get_alms_eigenmode(params, lmax, ell_ref, eigenvalues):
     """
-    Function to get the n'th Cl component given a specific eigenmode. See Alonso et al 2014.
+    Uses hp.synalm to generate alms from the Cls calculated as 
+    the n'th Cl component given a specific eigenmode. See Alonso et al 2014
+    for the algorithm.
 
     Parameters
     ----------
     * params (list (floats))
-        A list of all the input parameters ordered as A, alpha, beta, xi.
+        A list of all the input fiducial parameters ordered as A, alpha, beta, xi.
         Note: beta and xi are not used here, but this ordering was kept for ease of use with the
         other equations in this algorithm.
 
-    * ell (integer)
-        The given ell-value of the spherical harmonic mode.
+    * lmax (integer)
+        The maximum ell-value for the spherical harmonics 
 
     * ell_ref (integer)
         The reference value that the Cl-model is defined for.
 
-    * eigenvalue (float)
-        The real part of the eigenvalues from the diagonalisation of the cl-model. 
+    * eigenvalues (array (complex128))
+        The eigenvalues from the diagonalisation of the cl-model. 
 
 
     Returns
     -------
-    * Cl_n (float)
-        The Cl-value for the specific eigenmode
+    * alms_fiducial (array (floats)
+        The synthetic alms corresponsing to the Cl_n for the contributing eigenmodes
+        given the fiducial parameters
 
     """
 
     A = params[0]
     alpha = params[1]
 
-    Cl_n = A*(ell/ell_ref)**alpha * eigenvalue
+    nonzero_eigenvalues, eigenvalues_idx = extract_nonzero_eigenvalues(eigenvalues)
 
-    return Cl_n
+    Cl_n = np.zeros(shape=(eigenvalues_idx.size, lmax+1))
+    alm_n = np.zeros(shape=(eigenvalues_idx.size, (lmax+1)*((lmax+1)+1)//2),
+                            dtype=np.complex128)
+
+    for n, eigenvalue_n in enumerate(nonzero_eigenvalues):
+        Cl_n[n,0] = 0 # Set the monopole to zero for now 
+
+        for ell in np.arange(lmax+1):
+            Cl_n[n,ell] = A*(ell/ell_ref)**alpha * eigenvalue_n
+        
+        alm_n[n,:] = hp.synalm(Cl_n[n,:])
+
+    eigenmodes = eigenvectors[:, eigenvalues_idx].T
+    alms_fiducial = np.sum(alm_n[:,None,:]*eigenmodes[:,:,None], axis=0)
+
+    return alms_fiducial
 
 
 

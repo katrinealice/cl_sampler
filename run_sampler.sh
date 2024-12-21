@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time 06:00:00
+#SBATCH --time 10:00:00
 #SBATCH --mem 64G
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
@@ -37,7 +37,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -data_seed=20 \
                   -prior_seed=30 \
                   -profile=false \
-                  -tol=1e-07\
+                  -tol=5e-07\
                   -maxiter=30000\
                   -lmax=20\
                   -nside=128\
