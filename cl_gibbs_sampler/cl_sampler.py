@@ -1,4 +1,5 @@
 import os
+import ast 
 
 import cProfile
 import pstats
@@ -89,6 +90,9 @@ AP.add_argument("-nside", "--nside", type=int, required=False,
 AP.add_argument("-freq", "--frequency", type=float, required=False,
         help="the frequency (MHz) to sample for, will default to 100 MHz") 
 
+AP.add_argument("-freq_bounds", "--freq_bounds", type=str, required=False,
+        help="Frequencies for RSB in MHz ordered as [start, stop, step] and includes both ends of the range. Make sure to also set include_RSB=True") 
+
 AP.add_argument("-NLST", "--number_of_lst", type=int, required=False,
         help="int. Sets the number of LST timesteps. Defaults to 10")
 
@@ -106,6 +110,9 @@ AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
 
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
+
+AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
+        help="Toggles whether an RSB excess component is included in the data model. Note: it is required that you ALSO set the freq_bounds for this to work")
 
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
@@ -614,7 +621,8 @@ def get_alm_samples(data_vec,
                     imag_op,
                     initial_guess,
                     random_seed,
-                    tolerance):
+                    tolerance,
+                    key):
     """
     Function to draw samples from the GCR equation.
     """
@@ -654,7 +662,7 @@ def get_alm_samples(data_vec,
     iteration_time = time.time()-t_iter
             
     # Save output
-    np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}',
+    np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
              omega_0=omega_0,
              omega_1=omega_1,
              alm_random_seed=random_seed,
@@ -708,7 +716,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax, random_seed):
+def get_cl_samples(alms, lmax, random_seed, key):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -726,6 +734,9 @@ def get_cl_samples(alms, lmax, random_seed):
 
     * random_seed: (int)
         Sets the random seed for the specific function call
+
+    * key: (int)
+        The label for the specific sample number for the file name
 
     Returns
     -------
@@ -745,7 +756,7 @@ def get_cl_samples(alms, lmax, random_seed):
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
     # Save output
-    np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}',
+    np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
              sigma_ell=sigma_ell,
              cl_samples=cl_samples,
              cl_random_seed=random_seed,
@@ -878,7 +889,7 @@ def extract_nonzero_eigenvalues(eigenvalues):
     return eigenvalues_real, eigenvalues_idx
 
 
-def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref, eigenvalues):
+def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref):
     """
     Uses hp.synalm to generate alms from the Cls calculated as 
     the n'th Cl component given a specific eigenmode. See Alonso et al 2014
@@ -901,10 +912,6 @@ def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref, eigenvalues):
 
     * ell_ref (integer)
         The reference value that the Cl-model is defined for.
-
-    * eigenvalues (ndarray (complex128))
-        The eigenvalues from the diagonalisation of the cl-model. 
-
 
     Returns
     -------
@@ -930,7 +937,7 @@ def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref, eigenvalues):
     for n, eigenvalue_n in enumerate(nonzero_eigenvalues):
         Cl_n[n,0] = 0 # Set the monopole to zero for now 
 
-        for ell in np.arange(lmax+1):
+        for ell in np.arange(1,lmax+1):
             Cl_n[n,ell] = A*(ell/ell_ref)**alpha * eigenvalue_n
         
         alm_n[n,:] = hp.synalm(Cl_n[n,:])
@@ -1019,7 +1026,7 @@ def RSB_data_model(freq_list, lmax):
 
     RSB_hp[:,0] = get_monopole(monopole_params, freq_list, nu_ref)
 
-    RSB_alms = healpy2alms(RSB_hp)
+    RSB_alms = np.array([healpy2alms(RSB_mode) for RSB_mode in RSB_hp]) 
 
     return RSB_alms
 
@@ -1146,10 +1153,11 @@ if __name__ == "__main__":
 
     # Sets the frequency list for the RSB data model. Includes both ends of range.
     if ARGS['freq_bounds']:
-        freq_start = float(ARGS['freq_bounds'][0])
-        freq_stop = float(ARGS['freq_bounds'][1])
-        freq_step = float(ARGS['freq_bounds'][2])
-        freq_list = np.arange(start, stop+step, step)*1e06 # MHz -> Hz
+        freq_bounds = ast.literal_eval(ARGS['freq_bounds'])
+        freq_start = freq_bounds[0]
+        freq_stop = freq_bounds[1]
+        freq_step = freq_bounds[2]
+        freq_list = np.arange(freq_start, freq_stop+freq_step, freq_step)*1e06 # MHz -> Hz
     else:
         freq_list = None
 
@@ -1212,21 +1220,20 @@ if __name__ == "__main__":
     np.random.seed(prior_seed)
     x_true = get_alms_from_gsm(freq=ref_freq,lmax=lmax, nside=nside)
 
-    if include_RSB = True:
+    if incl_RSB == True:
         assert np.any(freq_list != None), \
                 "To include RSB excess you must define the bounds of the full \
                 frequency list in freq_bounds"
         
-        freq_idx = np.zeros(shape=len(freqs))
-        for i, frequency in enumerate(freqs):
+        for frequency in freqs:
             assert np.any(frequency == freq_list), \
                     "The frequency(ies) is(are) not represented by the frequency list \
                     given by freq_bounds"
 
-            # Extract index of the matching frequency for RSB alm picking
-            freq_idx[i] = np.argwhere(frequency==freq_list)[0][0]  
+        # Extract index of the pygsm reference frequency for RSB alm picking
+        freq_idx = np.argwhere(ref_freq*1e06==freq_list)[0][0] 
 
-        x_true += RSB_alms(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
+        x_true += RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
         print("RSB excess is included in the data model")
 
     else:
@@ -1353,13 +1360,15 @@ if __name__ == "__main__":
                                                  real_op = real_op,
                                                  imag_op = imag_op,
                                                  random_seed = alm_random_seed,
-                                                 tolerance=tolerance)
+                                                 tolerance=tolerance,
+                                                 key=key)
         initial_guess = x_soln.copy()
 
         # get cl samples
         cl_samples = get_cl_samples(alms=x_soln,
                                     lmax=lmax,
-                                    random_seed=cl_random_seed)
+                                    random_seed=cl_random_seed,
+                                    key=key)
         
 
         # Change signal_cov to use C_ell values
