@@ -1,4 +1,6 @@
 import os
+import sys
+import h5py
 import ast 
 
 import cProfile
@@ -25,7 +27,6 @@ import spherical, quaternionic
 import pyuvsim
 
 # Hydra
-import sys
 sys.path.append("/cosma8/data/dp270/dc-glas1/Hydra") # change this to your own path
 import hydra
 from hydra.utils import build_hex_array
@@ -622,7 +623,7 @@ def get_alm_samples(data_vec,
                     initial_guess,
                     random_seed,
                     tolerance,
-                    key):
+                    savefile):
     """
     Function to draw samples from the GCR equation.
     """
@@ -661,17 +662,26 @@ def get_alm_samples(data_vec,
     solver_time = time.time() - time_start_solver
     iteration_time = time.time()-t_iter
             
-    # Save output
-    np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
-             omega_0=omega_0,
-             omega_1=omega_1,
-             alm_random_seed=random_seed,
-             x_soln=x_soln,
-             rhs=rhs,
-             convergence_info=convergence_info,
-             solver_time=solver_time,
-             iteration_time=iteration_time
-            )
+    ## Save output
+    #np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
+    #         omega_0=omega_0,
+    #         omega_1=omega_1,
+    #         alm_random_seed=random_seed,
+    #         x_soln=x_soln,
+    #         rhs=rhs,
+    #         convergence_info=convergence_info,
+    #         solver_time=solver_time,
+    #         iteration_time=iteration_time
+    #        )
+    
+    _ = savefile.create_dataset(name="x_soln", data=x_soln)
+    _ = savefile.create_dataset(name="omega_0", data=omega_0)
+    _ = savefile.create_dataset(name="omega_1", data=omega_1)
+    _ = savefile.create_dataset(name="alm_random_seed", data=random_seed)
+    _ = savefile.create_dataset(name="rhs", data=rhs)
+    _ = savefile.create_dataset(name="convergence_info", data=convergence_info)
+    _ = savefile.create_dataset(name="solver_time", data=solver_time)
+    _ = savefile.create_dataset(name="iteration_time", data=iteration_time)
         
     return x_soln, iteration_time
 
@@ -716,7 +726,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax, random_seed, key):
+def get_cl_samples(alms, lmax, random_seed, key, savefile):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -738,6 +748,10 @@ def get_cl_samples(alms, lmax, random_seed, key):
     * key: (int)
         The label for the specific sample number for the file name
 
+    * savefile: (hdf5 Group object)
+        The group for the specific sample number to save all Cl-samples and 
+        additional information to.
+
     Returns
     -------
     * cl_samples: (ndarray (floats))
@@ -755,13 +769,18 @@ def get_cl_samples(alms, lmax, random_seed, key):
     cl_samples = invgamma.rvs(a, loc=0, scale=1)
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
-    # Save output
-    np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
-             sigma_ell=sigma_ell,
-             cl_samples=cl_samples,
-             cl_random_seed=random_seed,
-            )
+    ## Save output
+    #np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
+    #         sigma_ell=sigma_ell,
+    #         cl_samples=cl_samples,
+    #         cl_random_seed=random_seed,
+    #        )
  
+    _ = savefile.create_dataset(name="cl_sample", data=cl_samples)
+    _ = savefile.create_dataset(name="sigma_ell", data=sigma_ell)
+    _ = savefile.create_dataset(name="cl_random_seed", data=random_seed)
+    _ = savefile.create_dataset(name="key", data=key)
+
     return cl_samples
 
 def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
@@ -1341,14 +1360,24 @@ if __name__ == "__main__":
     if profile:
         profiler = cProfile.Profile()
         profiler.enable()
+
+    save_step = 100 #TODO: make this an cmd-line arg
+    status = -1
     
-    for key in range(n_samples):
+    for sample_no in range(n_samples):
 
         sample_start_time = time.time()
 
+        # Set up hdf5 data file
+        if sample_no // save_step > status:
+            savefile = h5py.File(path+f"samples_{sample_no}_to_{sample_no+save_step-1}.hdf5", "a")
+            status = sample_no // save_step
+
+        samplegroup = savefile.create_group(f"sample_{sample_no}")
+
         # Set random seeds by the sample no. to pass into the sample functions
-        alm_random_seed = 100*jobid + key
-        cl_random_seed = 100*jobid + key  
+        alm_random_seed = 100*jobid + sample_no
+        cl_random_seed = 100*jobid + sample_no
 
         # get alm samples using prior for the first sample, then C_ell 
         x_soln, iteration_time = get_alm_samples(data_vec = data_vec,
@@ -1360,15 +1389,16 @@ if __name__ == "__main__":
                                                  real_op = real_op,
                                                  imag_op = imag_op,
                                                  random_seed = alm_random_seed,
-                                                 tolerance=tolerance,
-                                                 key=key)
+                                                 tolerance = tolerance,
+                                                 savefile = samplegroup)
         initial_guess = x_soln.copy()
 
         # get cl samples
-        cl_samples = get_cl_samples(alms=x_soln,
-                                    lmax=lmax,
-                                    random_seed=cl_random_seed,
-                                    key=key)
+        cl_samples = get_cl_samples(alms = x_soln,
+                                    lmax = lmax,
+                                    random_seed = cl_random_seed,
+                                    key = sample_no,
+                                    savefile = samplegroup)
         
 
         # Change signal_cov to use C_ell values
