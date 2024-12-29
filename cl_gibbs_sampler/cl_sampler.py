@@ -1370,10 +1370,10 @@ if __name__ == "__main__":
 
         # Set up hdf5 data file
         if sample_no // save_step > status:
-            savefile = h5py.File(path+f"samples_{sample_no}_to_{sample_no+save_step-1}.hdf5", "a")
+            savefile = h5py.File(path+f"samples_{sample_no:05d}_to_{sample_no+save_step-1:05d}.hdf5", "a")
             status = sample_no // save_step
 
-        samplegroup = savefile.create_group(f"sample_{sample_no}")
+        samplegroup = savefile.create_group(f"sample_{sample_no:05d}")
 
         # Set random seeds by the sample no. to pass into the sample functions
         alm_random_seed = 100*jobid + sample_no
