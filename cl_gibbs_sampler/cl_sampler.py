@@ -1,4 +1,7 @@
 import os
+import sys
+import h5py
+import ast 
 
 import cProfile
 import pstats
@@ -24,7 +27,6 @@ import spherical, quaternionic
 import pyuvsim
 
 # Hydra
-import sys
 sys.path.append("/cosma8/data/dp270/dc-glas1/Hydra") # change this to your own path
 import hydra
 from hydra.utils import build_hex_array
@@ -89,6 +91,9 @@ AP.add_argument("-nside", "--nside", type=int, required=False,
 AP.add_argument("-freq", "--frequency", type=float, required=False,
         help="the frequency (MHz) to sample for, will default to 100 MHz") 
 
+AP.add_argument("-freq_bounds", "--freq_bounds", type=str, required=False,
+        help="Frequencies for RSB in MHz ordered as [start, stop, step] and includes both ends of the range. Make sure to also set include_RSB=True") 
+
 AP.add_argument("-NLST", "--number_of_lst", type=int, required=False,
         help="int. Sets the number of LST timesteps. Defaults to 10")
 
@@ -106,6 +111,9 @@ AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
 
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
+
+AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
+        help="Toggles whether an RSB excess component is included in the data model. Note: it is required that you ALSO set the freq_bounds for this to work")
 
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
@@ -614,7 +622,8 @@ def get_alm_samples(data_vec,
                     imag_op,
                     initial_guess,
                     random_seed,
-                    tolerance):
+                    tolerance,
+                    savefile):
     """
     Function to draw samples from the GCR equation.
     """
@@ -653,17 +662,26 @@ def get_alm_samples(data_vec,
     solver_time = time.time() - time_start_solver
     iteration_time = time.time()-t_iter
             
-    # Save output
-    np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}',
-             omega_0=omega_0,
-             omega_1=omega_1,
-             alm_random_seed=random_seed,
-             x_soln=x_soln,
-             rhs=rhs,
-             convergence_info=convergence_info,
-             solver_time=solver_time,
-             iteration_time=iteration_time
-            )
+    ## Save output
+    #np.savez(path+'alms_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
+    #         omega_0=omega_0,
+    #         omega_1=omega_1,
+    #         alm_random_seed=random_seed,
+    #         x_soln=x_soln,
+    #         rhs=rhs,
+    #         convergence_info=convergence_info,
+    #         solver_time=solver_time,
+    #         iteration_time=iteration_time
+    #        )
+    
+    _ = savefile.create_dataset(name="x_soln", data=x_soln)
+    _ = savefile.create_dataset(name="omega_0", data=omega_0)
+    _ = savefile.create_dataset(name="omega_1", data=omega_1)
+    _ = savefile.create_dataset(name="alm_random_seed", data=random_seed)
+    _ = savefile.create_dataset(name="rhs", data=rhs)
+    _ = savefile.create_dataset(name="convergence_info", data=convergence_info)
+    _ = savefile.create_dataset(name="solver_time", data=solver_time)
+    _ = savefile.create_dataset(name="iteration_time", data=iteration_time)
         
     return x_soln, iteration_time
 
@@ -680,7 +698,7 @@ def get_sigma_ell(alms,lmax):
     * alms: (ndarray (floats))
         The array represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
-        The first hald is the real values.
+        The first half is the real values.
 
     * lmax: (int)
         The lmax of the modes.
@@ -708,7 +726,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax, random_seed):
+def get_cl_samples(alms, lmax, random_seed, key, savefile):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -719,13 +737,20 @@ def get_cl_samples(alms, lmax, random_seed):
     * alms: (ndarray (floats))
         The array (shape=((lmax+1)**2)) represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
-        The first hald is the real values.
+        The first half is the real values.
 
     * lmax: (int)
         The lmax of the modes.
 
     * random_seed: (int)
         Sets the random seed for the specific function call
+
+    * key: (int)
+        The label for the specific sample number for the file name
+
+    * savefile: (hdf5 Group object)
+        The group for the specific sample number to save all Cl-samples and 
+        additional information to.
 
     Returns
     -------
@@ -744,13 +769,18 @@ def get_cl_samples(alms, lmax, random_seed):
     cl_samples = invgamma.rvs(a, loc=0, scale=1)
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
-    # Save output
-    np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}',
-             sigma_ell=sigma_ell,
-             cl_samples=cl_samples,
-             cl_random_seed=random_seed,
-            )
+    ## Save output
+    #np.savez(path+'cls_'+f'{data_seed}_'+f'{random_seed}_'+f'{key}',
+    #         sigma_ell=sigma_ell,
+    #         cl_samples=cl_samples,
+    #         cl_random_seed=random_seed,
+    #        )
  
+    _ = savefile.create_dataset(name="cl_sample", data=cl_samples)
+    _ = savefile.create_dataset(name="sigma_ell", data=sigma_ell)
+    _ = savefile.create_dataset(name="cl_random_seed", data=random_seed)
+    _ = savefile.create_dataset(name="key", data=key)
+
     return cl_samples
 
 def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
@@ -801,6 +831,223 @@ def set_signal_cov_by_cl(prior_cov, cl_samples, lmax):
 
     return signal_cov
 
+def diagonalise_cl_model(params, freq_list, nu_ref):
+    """
+    Based on Cl(nu1,nu2) model from Santos et al 2005. Here it is used for the RSB excess component. 
+    Note that this model is not defined for ell=0, see get_monopole() for this mode. 
+    This is the first step of the algorithm in Alonso et al 2014 - i.e. diagonalising the Cl/(A[ell/ell_ref]^alpha)
+
+    Parameters
+    ----------
+    * params (list (floats))
+        A list of all the input parameters ordered as A, alpha, beta, xi.
+        Note: A and alpha are not used here, but this ordering was kept for ease of use with the
+        other equations in this algorithm.
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * nu_ref (float)
+        The reference frequency in Hz
+
+    
+    Returns
+    -------
+    * eigenvalues (ndarray (complex128))
+        All the eigenvalues of the cl-model
+
+    * eigenvectors (ndarray (complex128))
+        All the eigenvectors of the cl-model
+
+    """
+
+    beta = params[2]
+    xi = params[3]
+
+    nfreqs = len(freq_list)
+
+    diag_cl_model = np.zeros(shape=(nfreqs,nfreqs))
+
+    for i, nu1 in enumerate(freq_list):
+        for j, nu2 in enumerate(freq_list):
+            diag_cl_model[i,j] = ((nu1*nu2)/(nu_ref**2))**beta * np.exp((-np.log(nu1/nu2)**2)/(2*xi**2))
+
+    # Diagonalise the Cl-model
+    eigenvalues, eigenvectors = np.linalg.eig(diag_cl_model)
+    eig_idx = np.argsort(eigenvalues)[::-1]
+    eigenvalues = eigenvalues[eig_idx]
+    eigenectors = eigenvectors[eig_idx]
+
+    return eigenvalues, eigenvectors
+
+def extract_nonzero_eigenvalues(eigenvalues):
+    """
+    Function to assert that the imaginary part of the eigenvalues is zero and only
+    return the non-zero real parts along with their list indices.
+
+    Parameters
+    ----------
+    * eigenvalues (ndarray (complex128))
+        Array of the eigenvalues of the cl-model
+
+    Returns
+    -------
+    * eigenvalues_real (ndarray (floats))
+        The non-zero real-parts of the eigenvalues
+
+    * eigenvalues_idx (ndarray (int))
+        List of the indices of the non-zero eigenvalues
+    """
+
+    assert np.all(np.isclose(eigenvalues.imag, 0)), \
+            'there are non-zero imaginary parts in the eigenvalues of the Cls'
+
+    eigenvalues_idx = np.where(~np.isclose(eigenvalues.real,0))[0]
+    eigenvalues_real = eigenvalues.real[eigenvalues_idx]
+
+    return eigenvalues_real, eigenvalues_idx
+
+
+def get_alms_fiducial(params, freq_list, nu_ref, lmax, ell_ref):
+    """
+    Uses hp.synalm to generate alms from the Cls calculated as 
+    the n'th Cl component given a specific eigenmode. See Alonso et al 2014
+    for the algorithm.
+
+    Parameters
+    ----------
+    * params (list (floats))
+        A list of all the input fiducial parameters ordered as A, alpha, beta, xi.
+        Note: beta and xi are not used directly here, but is still parsed to subroutines. 
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * nu_ref (float)
+        The reference frequency in Hz
+
+    * lmax (integer)
+        The maximum ell-value for the spherical harmonics 
+
+    * ell_ref (integer)
+        The reference value that the Cl-model is defined for.
+
+    Returns
+    -------
+    * alms_fiducial (ndarray (floats)
+        The synthetic alms corresponsing to the Cl_n for the contributing eigenmodes
+        given the fiducial parameters
+
+    """
+
+    A = params[0]
+    alpha = params[1]
+
+    eigenvalues, eigenvectors = diagonalise_cl_model(params=params,
+                                                     freq_list=freq_list,
+                                                     nu_ref=nu_ref)
+ 
+    nonzero_eigenvalues, eigenvalues_idx = extract_nonzero_eigenvalues(eigenvalues=eigenvalues)
+
+    Cl_n = np.zeros(shape=(eigenvalues_idx.size, lmax+1))
+    alm_n = np.zeros(shape=(eigenvalues_idx.size, (lmax+1)*((lmax+1)+1)//2),
+                            dtype=np.complex128)
+
+    for n, eigenvalue_n in enumerate(nonzero_eigenvalues):
+        Cl_n[n,0] = 0 # Set the monopole to zero for now 
+
+        for ell in np.arange(1,lmax+1):
+            Cl_n[n,ell] = A*(ell/ell_ref)**alpha * eigenvalue_n
+        
+        alm_n[n,:] = hp.synalm(Cl_n[n,:])
+
+    eigenmodes = eigenvectors[:, eigenvalues_idx].T
+    alms_fiducial = np.sum(alm_n[:,None,:]*eigenmodes[:,:,None], axis=0)
+
+    return alms_fiducial
+
+def get_monopole(monopole_params, freq_list, nu_ref):
+    """
+    A power law model for the monopole term given the temperature of the cmb and
+    the background and its spectral index beta.
+
+    Parameters:
+    -----------
+
+    * monopole_params (list (floats))
+        A list of parameters ordered as T_cmb, T_background, beta
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * nu_ref (float)
+        The reference frequency in Hz
+
+    Returns:
+    --------
+
+    * monopole (ndarray (floats))
+        The monopole term for all the frequencies
+
+    """
+    T_cmb = monopole_params[0]
+    T_background = monopole_params[1]
+    beta = monopole_params[2]
+
+    monopole = T_cmb + T_background*(freq_list/nu_ref)**beta
+
+    return monopole
+
+def RSB_data_model(freq_list, lmax):
+    """
+    Generates a set of alms for the RSB model given in Zhang et al 2024 and with
+    a monopole term defined by Dowell and Taylor 2018. The alms are generated to
+    be consistent with the Cl(nu,nu') through the algorithm in Alonso et al 2014.
+    The parameters for the RSB excess and monopole terms have been rescaled to
+    fit the same reference frequency of 400 MHz.
+
+    Parameters:
+    -----------
+
+    * freq_list (ndarray (floats))
+        An array of the frequencies in Hz
+
+    * lmax (integer)
+        The maximum ell-value for the spherical harmonics 
+
+    Returns:
+    --------
+    * RSB_alms (ndarray (floats))
+        The generated flattened alms.
+        The array represents all postive (+m) modes including zero
+        and has double length, as real and imaginary values are split.
+        The first half is the real values.
+
+   
+    """
+    
+    ell_ref = 10
+    nu_ref = 400*1e06 # Hz
+    
+    # Parameters corresponding to RSB2 in Zhang et el 2024. Amplitude has been
+    # adjusted to a reference frequency of 400 MHz
+    RSB_params = [0.106**2, -3.0, -2.66, 4.0] # A (K^2), alpha, beta, xi
+
+    # Monopole parameters (Dowell&Taylor 2018). Background temperature (amplitude)
+    # has been adjusted to a reference frequency of 400 MHz
+    monopole_params = [2.722, 2.239, -2.58] # T_cmb (K), T_background (K), beta
+
+    RSB_hp = get_alms_fiducial(params=RSB_params,
+                               freq_list=freq_list,
+                               nu_ref = nu_ref,
+                               lmax=lmax,
+                               ell_ref=ell_ref)
+
+    RSB_hp[:,0] = get_monopole(monopole_params, freq_list, nu_ref)
+
+    RSB_alms = np.array([healpy2alms(RSB_mode) for RSB_mode in RSB_hp]) 
+
+    return RSB_alms
 
 ###### MAIN ######    
 if __name__ == "__main__":
@@ -865,6 +1112,16 @@ if __name__ == "__main__":
         # Defaults to 30000, but rememeber to check convergence_info!
         maxiter = 30000
 
+    # Including RSB excess signal in the data model:
+    if ARGS['include_RSB']:
+        if ARGS['include_RSB'].lower() in ('true', 'yes', 't', 'y', '1'):
+            incl_RSB = True
+        elif ARGS['include_RSB'].lower() in ('false', 'no', 'f', 'n', '0'):
+            incl_RSB = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected for include_RSB')
+    else:
+        incl_RSB = False
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -903,13 +1160,25 @@ if __name__ == "__main__":
     else:
         nside = 128
 
-    # Frequency and reference frequency
+    # Frequency (in Hz) and pygsm frequency (in MHz) 
+    # TODO: this is a remnant from when it was a multifrequency instead of 
+    # per frequency code. Consider changing this.  
     if ARGS['frequency']:
         freqs = np.array([float(ARGS['frequency'])*1e06]) # MHz -> Hz, required by Hydra
         ref_freq = float(ARGS['frequency']) # MHz, required by PyGSM
     else:
         freqs = np.array([100e06]) # Hz, Hydra requires this
         ref_freq = 100. # MHz, PyGSM requires this 
+
+    # Sets the frequency list for the RSB data model. Includes both ends of range.
+    if ARGS['freq_bounds']:
+        freq_bounds = ast.literal_eval(ARGS['freq_bounds'])
+        freq_start = freq_bounds[0]
+        freq_stop = freq_bounds[1]
+        freq_step = freq_bounds[2]
+        freq_list = np.arange(freq_start, freq_stop+freq_step, freq_step)*1e06 # MHz -> Hz
+    else:
+        freq_list = None
 
     # NLST
     if ARGS['number_of_lst']:
@@ -969,6 +1238,27 @@ if __name__ == "__main__":
     # Setting the random seed to the prior_seed and calculating true sky
     np.random.seed(prior_seed)
     x_true = get_alms_from_gsm(freq=ref_freq,lmax=lmax, nside=nside)
+
+    if incl_RSB == True:
+        assert np.any(freq_list != None), \
+                "To include RSB excess you must define the bounds of the full \
+                frequency list in freq_bounds"
+        
+        for frequency in freqs:
+            assert np.any(frequency == freq_list), \
+                    "The frequency(ies) is(are) not represented by the frequency list \
+                    given by freq_bounds"
+
+        # Extract index of the pygsm reference frequency for RSB alm picking
+        freq_idx = np.argwhere(ref_freq*1e06==freq_list)[0][0] 
+
+        x_true += RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
+        print("RSB excess is included in the data model")
+
+    else:
+        print("RSB excess has not been included in the data model")
+
+    # Combined data model
     model_true = vis_response @ x_true
 
     # Inverse signal covariance 
@@ -1070,14 +1360,24 @@ if __name__ == "__main__":
     if profile:
         profiler = cProfile.Profile()
         profiler.enable()
+
+    save_step = 100 #TODO: make this an cmd-line arg
+    status = -1
     
-    for key in range(n_samples):
+    for sample_no in range(n_samples):
 
         sample_start_time = time.time()
 
+        # Set up hdf5 data file
+        if sample_no // save_step > status:
+            savefile = h5py.File(path+f"samples_{sample_no:05d}_to_{sample_no+save_step-1:05d}.hdf5", "a")
+            status = sample_no // save_step
+
+        samplegroup = savefile.create_group(f"sample_{sample_no:05d}")
+
         # Set random seeds by the sample no. to pass into the sample functions
-        alm_random_seed = 100*jobid + key
-        cl_random_seed = 100*jobid + key  
+        alm_random_seed = 100*jobid + sample_no
+        cl_random_seed = 100*jobid + sample_no
 
         # get alm samples using prior for the first sample, then C_ell 
         x_soln, iteration_time = get_alm_samples(data_vec = data_vec,
@@ -1089,13 +1389,16 @@ if __name__ == "__main__":
                                                  real_op = real_op,
                                                  imag_op = imag_op,
                                                  random_seed = alm_random_seed,
-                                                 tolerance=tolerance)
+                                                 tolerance = tolerance,
+                                                 savefile = samplegroup)
         initial_guess = x_soln.copy()
 
         # get cl samples
-        cl_samples = get_cl_samples(alms=x_soln,
-                                    lmax=lmax,
-                                    random_seed=cl_random_seed)
+        cl_samples = get_cl_samples(alms = x_soln,
+                                    lmax = lmax,
+                                    random_seed = cl_random_seed,
+                                    key = sample_no,
+                                    savefile = samplegroup)
         
 
         # Change signal_cov to use C_ell values
