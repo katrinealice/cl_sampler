@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time 72:00:00
+#SBATCH --time 10:00:00
 #SBATCH --mem 64G
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
@@ -51,6 +51,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -include_RSB=true \
                   -cosmic_var=false \
                   -front_factor=0.1 \
+                  -noise_factor=1 \
                   -jobid=$SLURM_ARRAY_TASK_ID \
                   "$@"
 
