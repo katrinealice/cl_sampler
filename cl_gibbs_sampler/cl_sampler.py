@@ -118,6 +118,9 @@ AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
 
+AP.add_argument("-noise_factor", "--noise_factor", type=float, required=False,
+        help="Scales the noise level on the data vector only Float.")
+
 ARGS = vars(AP.parse_args())
 
 ## Functions
@@ -1141,6 +1144,13 @@ if __name__ == "__main__":
         # Default to not change the constraint on the monopole
         a_00_front_factor = 1.
 
+    # Scaling factor for the noise on the data vector 
+    if ARGS['noise_factor']:
+        noise_factor = float(ARGS['noise_factor'])
+    else:
+        # Defaults to no modulation
+        noise_factor = 1.
+
     # Number of samples
     if ARGS['number_of_samples']:
         n_samples = int(ARGS['number_of_samples'])
@@ -1296,7 +1306,7 @@ if __name__ == "__main__":
     inv_noise_cov = 1/noise_cov
     data_noise = (np.random.randn(noise_cov.size) 
                   + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
-    data_vec = model_true + data_noise
+    data_vec = model_true + noise_factor * data_noise
 
     # Pre-compute the LHS operators, needs defining before the LinearOperator function
     real_op, imag_op = get_lhs_operators(vis_response=vis_response, inv_noise_cov=inv_noise_cov) 
