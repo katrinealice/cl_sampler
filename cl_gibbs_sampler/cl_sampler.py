@@ -118,6 +118,15 @@ AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
 
+AP.add_argument("-zero_prior_mean", "--zero_prior_mean", type=str, required=False,
+        help="Boolean. Fixes the prior mean a_0 to zeros")
+
+AP.add_argument("-zero_inv_prior", "--zero_inverse_prior_cov", type=str, required=False,
+        help="Boolean. Sets the inverse prior covariance S^{-1} to zeros")
+
+AP.add_argument("-cl_prior_pow", "--cl_prior_pow", type=float, required=False,
+        help="Modifier term for alpha in the inverse gamma distribution for Cl. Defaults to zero, i.e. no modification")
+
 AP.add_argument("-noise_factor", "--noise_factor", type=float, required=False,
         help="Scales the noise level on the data vector only Float.")
 
@@ -729,7 +738,7 @@ def get_sigma_ell(alms,lmax):
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax, random_seed, key, savefile):
+def get_cl_samples(alms, lmax, random_seed, key, savefile, cl_prior_pow=0.):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -744,6 +753,9 @@ def get_cl_samples(alms, lmax, random_seed, key, savefile):
 
     * lmax: (int)
         The lmax of the modes.
+
+    * cl_prior_pow (float)
+        Prior term to modify the alpha of the inverse gamma function. Defaults to zero.
 
     * random_seed: (int)
         Sets the random seed for the specific function call
@@ -767,9 +779,9 @@ def get_cl_samples(alms, lmax, random_seed, key, savefile):
     sigma_ell = get_sigma_ell(alms, lmax)
 
     unique_ell = np.arange(1,lmax+1)
-    a = (2*unique_ell - 1)/2
+    alpha = (2*unique_ell - 1)/2
     
-    cl_samples = invgamma.rvs(a, loc=0, scale=1)
+    cl_samples = invgamma.rvs(alpha + cl_prior_pow, loc=0, scale=1)
     cl_samples *= sigma_ell * (2*unique_ell +1)/2
 
     ## Save output
@@ -1144,12 +1156,41 @@ if __name__ == "__main__":
         # Default to not change the constraint on the monopole
         a_00_front_factor = 1.
 
+    # Fixes the prior mean (a_0) to zeros 
+    if ARGS['zero_prior_mean']:
+        if ARGS['zero_prior_mean'].lower() in ('true', 'yes', 't', 'y', '1'):
+            zero_prior_mean = True
+        elif ARGS['zero_prior_mean'].lower() in ('false', 'no', 'f', 'n', '0'):
+            zero_prior_mean = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
+    else:
+        zero_prior_mean = False
+
+    # Sets the inverse prior covariance S^{-1} to zero 
+    if ARGS['zero_inverse_prior_cov']:
+        if ARGS['zero_inverse_prior_cov'].lower() in ('true', 'yes', 't', 'y', '1'):
+            zero_inv_prior = True
+        elif ARGS['zero_inverse_prior_cov'].lower() in ('false', 'no', 'f', 'n', '0'):
+            zero_inv_prior = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
+    else:
+        zero_inv_prior = False
+
     # Scaling factor for the noise on the data vector 
     if ARGS['noise_factor']:
         noise_factor = float(ARGS['noise_factor'])
     else:
         # Defaults to no modulation
         noise_factor = 1.
+
+    # Modifier for alpha term in inverse gamma dist. for Cl
+    if ARGS['cl_prior_pow']:
+        cl_prior_pow = float(ARGS['cl_prior_pow'])
+    else:
+        # Defaults to zero, i.e. no modification
+        cl_prior_pow = 0.
 
     # Number of samples
     if ARGS['number_of_samples']:
@@ -1289,10 +1330,18 @@ if __name__ == "__main__":
             cosmic_var[i] = 0.1 * np.sqrt(2/(2*ell+1))*cls[ell]*f_sky
         prior_cov += cosmic_var
 
-    inv_prior_cov = 1/prior_cov
+    if zero_inv_prior == True:
+        # Sets the inverse prior covariance S^{-1} to zero
+        inv_prior_cov = np.zeros_like(prior_cov)
+    else:
+        inv_prior_cov = 1/prior_cov
     
-    # Set the prior mean by the prior variance 
-    a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
+    if zero_prior_mean == True:
+        # Fixes the prior mean to zeros
+        a_0 = np.zeros_like(x_true)
+    else:
+        # Set the prior mean by the prior variance 
+        a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
     
     # setting the ell=0 mode to be the true value
     a_0[ell_0_idx] = x_true[ell_0_idx]
@@ -1408,7 +1457,8 @@ if __name__ == "__main__":
                                     lmax = lmax,
                                     random_seed = cl_random_seed,
                                     key = sample_no,
-                                    savefile = samplegroup)
+                                    savefile = samplegroup,
+                                    cl_prior_pow = cl_prior_pow)
         
 
         # Change signal_cov to use C_ell values

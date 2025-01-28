@@ -48,9 +48,12 @@ python -u $SCRIPT -dir="$output_dir" \
                   -lst_end=8.\
                   -ant_dist=1.5\
                   -dish_dia=1.\
-                  -include_RSB=true \
+                  -include_RSB=false \
                   -cosmic_var=false \
                   -front_factor=0.1 \
+                  -zero_prior_mean=true \
+                  -zero_inv_prior=false \
+                  -cl_prior_pow=0. \
                   -noise_factor=1 \
                   -jobid=$SLURM_ARRAY_TASK_ID \
                   "$@"
