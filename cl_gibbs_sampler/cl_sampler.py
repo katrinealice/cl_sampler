@@ -697,13 +697,15 @@ def get_alm_samples(data_vec,
         
     return x_soln, iteration_time
 
-def get_sigma_ell(alms,lmax):
+def get_sigma_ell(alms, a_0, lmax):
     """
-    Calculates sigma_ell for the angular powerspectrum given a set of
-    alms and an lmax. The alms are 'realified' i.e. flattened with first 
-    the real-part and then the imaginary part. Note, there should be no
+    Calculates sigma_ell (i.e. the empirical angular powerspectrum) given a
+    a set of alms and an lmax. The alms are 'realified' i.e. flattened with 
+    first the real-part and then the imaginary part. Note, there should be no
     m=0 imaginary modes. The alms are (m,l)-ordered (m-major).
-    The invgamm function is not defined for ell=0 so this mode is left out.
+
+    The invgamm function is not defined for ell=0 so this mode is left out. The
+    variance is centered, i.e. the prior mean a_0 is subtracted from the alm.
 
     Parameters
     ----------
@@ -711,6 +713,12 @@ def get_sigma_ell(alms,lmax):
         The array represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
         The first half is the real values.
+
+    * a_0: (ndarray (floats))
+        The prior mean for the alms. The array represents all positive
+        (+m) modes including zero and has double length, as real and imaginary
+        values are split (excluding m=0 imaginary modes). The first half is
+        the real values.
 
     * lmax: (int)
         The lmax of the modes.
@@ -724,21 +732,23 @@ def get_sigma_ell(alms,lmax):
     # excluding ell=0 because it's not defined for the invgamma func.
     sigma_ell = np.zeros(shape = ((lmax+1)-1))
 
-    # Calculate sigma_ell = 1/(2*ell + 1) sum_m |a_lm|^2
+    # Calculate sigma_ell = 1/(2*ell + 1) Sum_m |a_lm - a_0|^2
     for ell in np.arange(1,lmax+1):
         real_idx, _ = get_idx_ml(0,ell,lmax)
-        sigma_ell[ell-1] = alms[real_idx] * alms[real_idx]
+        sigma_ell[ell-1] = (alms[real_idx]-a_0[real_idx]) * (alms[real_idx]-a_0[real_idx])
 
         for em in np.arange(1,ell+1):
             real_idx, imag_idx = get_idx_ml(em, ell, lmax)
-            sigma_ell[ell-1] += 2 * (alms[real_idx] * alms[real_idx] +
-                                     alms[imag_idx] * alms[imag_idx])
+            sigma_ell[ell-1] += 2 * ( 
+                    (alms[real_idx]-a_0[real_idx]) * (alms[real_idx]-a_0[real_idx]) +
+                    (alms[imag_idx]-a_0[imag_idx]) * (alms[imag_idx]-a_0[imag_idx]) 
+                    )
         
         sigma_ell[ell-1] /= 2*ell + 1
 
     return sigma_ell
 
-def get_cl_samples(alms, lmax, random_seed, key, savefile, cl_prior_pow=0.):
+def get_cl_samples(alms, a_0, lmax, random_seed, key, savefile, cl_prior_pow=0.):
     """
     Uses the inverse gamma function (see Eriksen 2007) to generate 
     samples of C_ell given the alms. The inverse gammafunction doesn't
@@ -750,6 +760,13 @@ def get_cl_samples(alms, lmax, random_seed, key, savefile, cl_prior_pow=0.):
         The array (shape=((lmax+1)**2)) represents all postive (+m) modes including zero
         and has double length, as real and imaginary values are split.
         The first half is the real values.
+
+    * a_0: (ndarray (floats))
+        The prior mean for the alms. The array represents all positive
+        (+m) modes including zero and has double length, as real and imaginary
+        values are split (excluding m=0 imaginary modes). The first half is
+        the real values.
+
 
     * lmax: (int)
         The lmax of the modes.
@@ -776,7 +793,7 @@ def get_cl_samples(alms, lmax, random_seed, key, savefile, cl_prior_pow=0.):
     """
     np.random.seed(random_seed)
     
-    sigma_ell = get_sigma_ell(alms, lmax)
+    sigma_ell = get_sigma_ell(alms, a_0, lmax)
 
     unique_ell = np.arange(1,lmax+1)
     alpha = (2*unique_ell - 1)/2
@@ -1342,9 +1359,9 @@ if __name__ == "__main__":
     else:
         # Set the prior mean by the prior variance 
         a_0 = np.random.randn(x_true.size)*np.sqrt(prior_cov) + x_true # gaussian centered on alms with S variance 
-    
-    # setting the ell=0 mode to be the true value
-    a_0[ell_0_idx] = x_true[ell_0_idx]
+        
+        # setting the ell=0 mode to be the true value
+        a_0[ell_0_idx] = x_true[ell_0_idx]
     
     # Save a_0 in separate file as there has been issues with the combined .npz file
     np.savez(path+'a_0_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
@@ -1454,6 +1471,7 @@ if __name__ == "__main__":
 
         # get cl samples
         cl_samples = get_cl_samples(alms = x_soln,
+                                    a_0 = a_0,
                                     lmax = lmax,
                                     random_seed = cl_random_seed,
                                     key = sample_no,
