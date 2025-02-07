@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time 10:00:00
+#SBATCH --time 72:00:00
 #SBATCH --mem 64G
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
@@ -33,7 +33,7 @@ done
 
 export OMP_NUM_THREADS=1 
 python -u $SCRIPT -dir="$output_dir" \
-                  -nsamples=4000 \
+                  -nsamples=10000 \
                   -data_seed=20 \
                   -prior_seed=30 \
                   -profile=false \
@@ -51,7 +51,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -include_RSB=false \
                   -cosmic_var=false \
                   -front_factor=0.1 \
-                  -zero_prior_mean=true \
+                  -zero_prior_mean=false \
                   -zero_inv_prior=false \
                   -cl_prior_pow=0. \
                   -noise_factor=1 \
