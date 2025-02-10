@@ -115,6 +115,9 @@ AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
 AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
         help="Toggles whether an RSB excess component is included in the data model. Note: it is required that you ALSO set the freq_bounds for this to work")
 
+AP.add_argument("-RSB_only", "--RSB_only", type=str, required=False,
+        help="Sets the true sky to be given by the RSB excess component only. Automatically enables include_RSB. Note: it is required that you ALSO set the freq_bounds for this to work")
+
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
 
@@ -1155,6 +1158,17 @@ if __name__ == "__main__":
     else:
         incl_RSB = False
 
+    # Using only the RSB as the true input model:
+    if ARGS['RSB_only']:
+        if ARGS['RSB_only'].lower() in ('true', 'yes', 't', 'y', '1'):
+            RSB_only = True
+            incl_RSB = True
+        elif ARGS['RSB_only'].lower() in ('false', 'no', 'f', 'n', '0'):
+            RSB_only = False
+        else:
+            raise argparse.ArgumentTypeError('Bolean value expected for RSB_only')
+
+
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
         if ARGS['cosmic_variance'].lower() in ('true', 'yes', 't', 'y', '1'):
@@ -1319,9 +1333,14 @@ if __name__ == "__main__":
 
         # Extract index of the pygsm reference frequency for RSB alm picking
         freq_idx = np.argwhere(ref_freq*1e06==freq_list)[0][0] 
-
-        x_true += RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
-        print("RSB excess is included in the data model")
+        
+        if RSB_only == True:
+            # overwrite true alms 
+            x_true = RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:]
+            print("True model is RSB only")
+        else:
+            x_true += RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
+            print("RSB excess is included in the data model on top of pygsm")
 
     else:
         print("RSB excess has not been included in the data model")
