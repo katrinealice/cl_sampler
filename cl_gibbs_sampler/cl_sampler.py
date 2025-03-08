@@ -112,11 +112,17 @@ AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
 
+AP.add_argument("-cl_sampling", "--cl_sampling", type=str, required=False,
+        help="Toggles whether the Cl's are sampled along with the a_lm or not")
+
 AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
         help="Toggles whether an RSB excess component is included in the data model. Note: it is required that you ALSO set the freq_bounds for this to work")
 
 AP.add_argument("-RSB_only", "--RSB_only", type=str, required=False,
         help="Sets the true sky to be given by the RSB excess component only. Automatically enables include_RSB. Note: it is required that you ALSO set the freq_bounds for this to work")
+
+AP.add_argument("-RSB_boost", "--RSB_boost", type=float, required=False,
+        help="Introduces a boost/multiplication of the sqrt of the amplitude for the RSB of the form A = (boost * old_value)**2 ")
 
 AP.add_argument("-front_factor", "--a_00_front_factor", type=float, required=False,
         help="change the constraint from the prior_variance on the monopole specifically. Float.")
@@ -1033,7 +1039,7 @@ def get_monopole(monopole_params, freq_list, nu_ref):
 
     return monopole
 
-def RSB_data_model(freq_list, lmax):
+def RSB_data_model(freq_list, lmax, boost):
     """
     Generates a set of alms for the RSB model given in Zhang et al 2024 and with
     a monopole term defined by Dowell and Taylor 2018. The alms are generated to
@@ -1050,6 +1056,9 @@ def RSB_data_model(freq_list, lmax):
     * lmax (integer)
         The maximum ell-value for the spherical harmonics 
 
+    * boost (float)
+        Potential boost of the amplitude A = (boost * old_value)**2
+
     Returns:
     --------
     * RSB_alms (ndarray (floats))
@@ -1065,8 +1074,10 @@ def RSB_data_model(freq_list, lmax):
     nu_ref = 400*1e06 # Hz
     
     # Parameters corresponding to RSB2 in Zhang et el 2024. Amplitude has been
-    # adjusted to a reference frequency of 400 MHz
-    RSB_params = [0.106**2, -3.0, -2.66, 4.0] # A (K^2), alpha, beta, xi
+    # adjusted to a reference frequency of 400 MHz. Amplitude boosted to match pygsm from
+    # A = (0.106 K)**2 to  A = (10.6 K) **2 
+    RSB_params = [(boost * 0.106)**2, -3.0, -2.66, 4.0] # A (K^2), alpha, beta, xi
+    #RSB_params = [(25 * 0.106)**2, -3.0, -2.66, 4.0] # A (K^2), alpha, beta, xi
 
     # Monopole parameters (Dowell&Taylor 2018). Background temperature (amplitude)
     # has been adjusted to a reference frequency of 400 MHz
@@ -1147,6 +1158,18 @@ if __name__ == "__main__":
         # Defaults to 30000, but rememeber to check convergence_info!
         maxiter = 30000
 
+    # Toggling whether the Cl's are sampled too:
+    if ARGS['cl_sampling']:
+        if ARGS['cl_sampling'].lower() in ('true', 'yes', 't', 'y', '1'):
+            cl_sampling = True
+        elif ARGS['cl_sampling'].lower() in ('false', 'no', 'f', 'n', '0'):
+            cl_sampling = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected for cl_sampling')
+    else:
+        cl_sampling = False
+
+
     # Including RSB excess signal in the data model:
     if ARGS['include_RSB']:
         if ARGS['include_RSB'].lower() in ('true', 'yes', 't', 'y', '1'):
@@ -1163,11 +1186,17 @@ if __name__ == "__main__":
         if ARGS['RSB_only'].lower() in ('true', 'yes', 't', 'y', '1'):
             RSB_only = True
             incl_RSB = True
+            print('RSB_only has been set to True')
         elif ARGS['RSB_only'].lower() in ('false', 'no', 'f', 'n', '0'):
             RSB_only = False
         else:
             raise argparse.ArgumentTypeError('Bolean value expected for RSB_only')
 
+    # Introducing a boost / multiplication of the sqrt of the amplitude for the RSB component
+    if ARGS['RSB_boost']:
+        boost = float(ARGS['RSB_boost'])
+    else:
+        boost = 1
 
     # Including cosmic variance into the prior variance:
     if ARGS['cosmic_variance']:
@@ -1336,10 +1365,10 @@ if __name__ == "__main__":
         
         if RSB_only == True:
             # overwrite true alms 
-            x_true = RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:]
+            x_true = RSB_data_model(freq_list=freq_list, lmax=lmax, boost=boost)[freq_idx,:]
             print("True model is RSB only")
         else:
-            x_true += RSB_data_model(freq_list=freq_list, lmax=lmax)[freq_idx,:] 
+            x_true += RSB_data_model(freq_list=freq_list, lmax=lmax, boost=boost)[freq_idx,:] 
             print("RSB excess is included in the data model on top of pygsm")
 
     else:
@@ -1388,6 +1417,10 @@ if __name__ == "__main__":
     # Inverse noise covariance and noise on data
     np.random.seed(data_seed)
     noise_cov = 0.5 * radiometer_eq(autos@x_true, ants, delta_time, delta_freq)
+    
+    ##TODO: For debugging purposes online, remove this!!! 
+    #noise_cov /= 10 
+
     inv_noise_cov = 1/noise_cov
     data_noise = (np.random.randn(noise_cov.size) 
                   + 1.j*np.random.randn(noise_cov.size)) * np.sqrt(noise_cov) 
@@ -1487,22 +1520,23 @@ if __name__ == "__main__":
                                                  tolerance = tolerance,
                                                  savefile = samplegroup)
         initial_guess = x_soln.copy()
-
-        # get cl samples
-        cl_samples = get_cl_samples(alms = x_soln,
-                                    a_0 = a_0,
-                                    lmax = lmax,
-                                    random_seed = cl_random_seed,
-                                    key = sample_no,
-                                    savefile = samplegroup,
-                                    cl_prior_pow = cl_prior_pow)
         
-
-        # Change signal_cov to use C_ell values
-        signal_cov = set_signal_cov_by_cl(prior_cov = prior_cov,
-                                          cl_samples = cl_samples,
-                                          lmax = lmax)
-        inv_signal_cov = 1/signal_cov
+        if cl_sampling == True:
+            # get cl samples
+            cl_samples = get_cl_samples(alms = x_soln,
+                                        a_0 = a_0,
+                                        lmax = lmax,
+                                        random_seed = cl_random_seed,
+                                        key = sample_no,
+                                        savefile = samplegroup,
+                                        cl_prior_pow = cl_prior_pow)
+         
+            
+            # Change signal_cov to use C_ell values
+            signal_cov = set_signal_cov_by_cl(prior_cov = prior_cov,
+                                              cl_samples = cl_samples,
+                                              lmax = lmax)
+            inv_signal_cov = 1/signal_cov
             
         sample_total_time = time.time() - sample_start_time
         avg_iter_time += sample_total_time

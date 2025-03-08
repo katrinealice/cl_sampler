@@ -44,3 +44,5 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 **cosmic_variance**: A boolean argument to include or exclude cosmic variance in the prior variance. If not provided, it defaults to False. 
 
 **front_factor**: Float. This is the front factor for the prior covariance for the monopole (a_00) mode. Defaults to 1 (i.e. no special treatment) 
+
+**RSB_only**: Boolean. Sets the sky model to be given by the RSB-model only. Defaults to false.

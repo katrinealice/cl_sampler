@@ -49,6 +49,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -ant_dist=1.5\
                   -dish_dia=1.\
                   -include_RSB=false \
+                  -RSB_only=false \
                   -cosmic_var=false \
                   -front_factor=0.1 \
                   -zero_prior_mean=false \
