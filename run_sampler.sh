@@ -49,6 +49,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -ant_dist=1.5\
                   -dish_dia=1.\
                   -cl_sampling=true \
+                  -include_wf=true \
                   -include_RSB=false \
                   -RSB_only=false \
                   -RSB_boost=1 \

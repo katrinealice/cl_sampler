@@ -115,6 +115,9 @@ AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
 AP.add_argument("-cl_sampling", "--cl_sampling", type=str, required=False,
         help="Toggles whether the Cl's are sampled along with the a_lm or not")
 
+AP.add_argument("-include_wf", "--include_wf", type=str, required=False,
+        help="Toggles whether the Wiener Filter solution is calculated and if so sets the initial guess to the WF-solution. If not, it will use the true sky instead.")
+
 AP.add_argument("-include_RSB", "--include_RSB", type=str, required=False,
         help="Toggles whether an RSB excess component is included in the data model. Note: it is required that you ALSO set the freq_bounds for this to work")
 
@@ -1169,6 +1172,17 @@ if __name__ == "__main__":
     else:
         cl_sampling = False
 
+    # Toggling whether the Wiener Filter is calculated and used as initial guess:
+    if ARGS['include_wf']:
+        if ARGS['include_wf'].lower() in ('true', 'yes', 't', 'y', '1'):
+            include_wf = True
+        elif ARGS['include_wf'].lower() in ('false', 'no', 'f', 'n', '0'):
+            include_wf = False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected for include_wf')
+    else:
+        # Defaults to the true sky as initial guess isntead
+        include_wf = False
 
     # Including RSB excess signal in the data model:
     if ARGS['include_RSB']:
@@ -1432,28 +1446,32 @@ if __name__ == "__main__":
     # Define the inv_signal_cov before calling the LinearOperator function
     inv_signal_cov = inv_prior_cov.copy()
 
-    # RHS: Wiener filter solution to provide initial guess:
-    omega_0_wf = np.zeros_like(a_0)
-    omega_1_wf = np.zeros_like(model_true, dtype=np.complex128)
-    rhs_wf = construct_rhs_no_rot(data_vec,
-                                  inv_noise_cov, 
-                                  inv_signal_cov, 
-                                  omega_0_wf, 
-                                  omega_1_wf, 
-                                  a_0, 
-                                  vis_response)
+    if include_wf == True:
+        # RHS: Wiener filter solution to provide initial guess:
+        omega_0_wf = np.zeros_like(a_0)
+        omega_1_wf = np.zeros_like(model_true, dtype=np.complex128)
+        rhs_wf = construct_rhs_no_rot(data_vec,
+                                      inv_noise_cov, 
+                                      inv_signal_cov, 
+                                      omega_0_wf, 
+                                      omega_1_wf, 
+                                      a_0, 
+                                      vis_response)
+            
+        # LHS: Build linear operator object 
+        lhs_shape = (rhs_wf.size, rhs_wf.size)
+        lhs_linear_op = LinearOperator(matvec = lhs_operator,
+                                           shape = lhs_shape)
     
-    # LHS: Build linear operator object 
-    lhs_shape = (rhs_wf.size, rhs_wf.size)
-    lhs_linear_op = LinearOperator(matvec = lhs_operator,
-                                       shape = lhs_shape)
-
-    # Get the Wiener Filter solution for initial guess
-    wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
-                                          b = rhs_wf,
-                                          tol = tolerance,
-                                          maxiter = maxiter)
-    initial_guess = wf_soln.copy()
+         # Get the Wiener Filter solution for initial guess
+        wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
+                                              b = rhs_wf,
+                                              tol = tolerance,
+                                              maxiter = maxiter)
+        initial_guess = wf_soln.copy()
+    else:
+        # The initial guess for the Gibbs sampler will be the true sky
+        initial_guess = x_true.copy()
 
     # Time for all precomputations
     precomp_time = time.time()-start_time
