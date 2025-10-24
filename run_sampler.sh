@@ -25,7 +25,6 @@ do
     case $arg in 
         -dir=*)
         output_dir="${arg#*=}"
-        shift
         ;;
     esac
 done
@@ -45,7 +44,6 @@ python -u $SCRIPT -dir="$output_dir" \
                   -freq_bounds="[400,500,10]"\
                   -lst_start=0.\
                   -lst_end=8.\
-                  -ant_dist=1.5\
                   -dish_dia=1.\
                   -cl_sampling=true \
                   -include_wf=true \
@@ -62,8 +60,8 @@ python -u $SCRIPT -dir="$output_dir" \
                   "$@"
 
 # Save a copy of the shell script in the directory created by cl_sampler.py
-if [ -d "/nfs_perseus2/raid3/kglass/$output_dir" ]; then
-    cp "$0" "/nfs_perseus2/raid3/kglass/$output_dir/run_sampler.sh"
+if [ -d "/nfs_perseus2/raid3/kglass/data/$output_dir" ]; then
+    cp "$0" "/nfs_perseus2/raid3/kglass/data/$output_dir/run_sampler.sh"
 else
     echo "Error: output directory '$output_dir' does not exist"
     exit 1

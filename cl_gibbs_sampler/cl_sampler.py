@@ -27,8 +27,6 @@ from pygdsm import GlobalSkyModel
 import spherical, quaternionic
 
 # Simulation
-#import pyuvsim
-#from pyuvdata.analytic_beam import AnalyticBeam
 from pyuvdata import GaussianBeam
 
 # Hydra
@@ -112,7 +110,7 @@ AP.add_argument("-ant_dist", "--ant_distance", type=float, required=False,
         help="The distance between the antennas in the hexagonal grid in metres. Defaults to 14.6 m (HERA)")
 
 AP.add_argument("-dish_dia", "--dish_diameter", type=float, required=False,
-        help="Sets the diameter of the dish. Defaults to HERA-like 14.0 m")
+        help="Sets the diameter of the dish in meters. Defaults to HERA-like 14.0 m")
 
 AP.add_argument("-cosmic_var", "--cosmic_variance", type=str, required=False,
         help="Toggles whether a cosmic variance term is included in the prior variance")
@@ -160,7 +158,7 @@ def vis_proj_operator_no_rot(freqs, lsts, beams, ant_pos, lmax, nside, latitude=
     ----------
    
     * freqs (array_like):
-            Frequencies, in MHz.
+            Frequencies, in Hz.
     
     * lsts (array):
             lsts (times) for the simulation. In radians.
@@ -1107,6 +1105,7 @@ def RSB_data_model(freq_list, lmax, boost):
 if __name__ == "__main__":
     start_time = time.time()
     
+    print('\nSetting output directory ...')
     # Creating directory for output
     if ARGS['directory']: 
         directory = str(ARGS['directory'])
@@ -1116,10 +1115,11 @@ if __name__ == "__main__":
     path = f'/home/kglass/data/{directory}/'
     try: 
         os.makedirs(path)
-        print(f'Created folder {path}\n')
+        print(f'|  Created folder {path}')
     except FileExistsError:
-        print(f'Folder {path} already exists\n')
+        print(f'|  Folder {path} already exists')
     
+    print(f'\nDefining random seeds and id ... ')
     # Defining the data_seed for the noise of the simulated data
     if ARGS['data_seed']:
         data_seed = int(ARGS['data_seed'])
@@ -1155,6 +1155,15 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError('Boolean value expected')
     else:
         profile = False
+
+    print('\nSetting up sampling parameters ...')
+    # Number of samples
+    if ARGS['number_of_samples']:
+        n_samples = int(ARGS['number_of_samples'])
+    else:
+        # If none is passed use 100 samples as default
+        n_samples = 100
+    print(f'|  Number of samples set to {n_samples}')
 
     # Setting the tolerance for the conjugate gradient solver for the alm-samples
     if ARGS['tolerance']:
@@ -1286,14 +1295,6 @@ if __name__ == "__main__":
         # Defaults to zero, i.e. no modification
         cl_prior_pow = 0.
 
-    # Number of samples
-    if ARGS['number_of_samples']:
-        n_samples = int(ARGS['number_of_samples'])
-    else:
-        # If none is passed use 100 samples as default
-        n_samples = 100
-    print(f'|  Number of samples set to {n_samples}')
-
     # The lmax for the spherical harmonic modes
     if ARGS['lmax']:
         lmax = int(ARGS['lmax'])
@@ -1308,6 +1309,7 @@ if __name__ == "__main__":
         nside = 128
     print(f'|  nside set to {nside}')
 
+    print('\nSetting up observational parameters ...')
     # Frequency (in Hz) and pygsm frequency (in MHz) 
     # TODO: this is a remnant from when it was a multifrequency instead of 
     # per frequency code. Consider changing this.  
@@ -1317,7 +1319,7 @@ if __name__ == "__main__":
     else:
         freqs = np.array([100e06]) # Hz, Hydra requires this
         ref_freq = 100. # MHz, PyGSM requires this 
-    print(f'|  reference frequency set to {ref_freq} MHz')
+    print(f'|  reference frequency set to {freqs} Hz')
 
     # Sets the frequency list for the RSB data model. Includes both ends of range.
     if ARGS['freq_bounds']:
@@ -1334,6 +1336,7 @@ if __name__ == "__main__":
         NLST = int(ARGS['number_of_lst'])
     else:
         NLST = 10
+    print(f'|  number of lsts is {NLST}')
 
     # Start of lst range
     if ARGS['lst_start']:
@@ -1346,13 +1349,7 @@ if __name__ == "__main__":
         lst_end = float(ARGS['lst_end'])
     else:
         lst_end = 8. #hr
-
-    # distance between antennas
-    if ARGS['ant_distance']:
-        ant_distance = float(ARGS['ant_distance']) # m
-    else:
-        # defaults to HERA antenna distance
-        ant_distance = 14.6 # m
+    print(f'|  LST range is {lst_start} hr to {lst_end} hr')
 
     # diameter of dish
     if ARGS['dish_diameter']:
@@ -1360,7 +1357,19 @@ if __name__ == "__main__":
     else:
         # defaults to HERA dishes
         dish_diameter = 14. # m
+    print(f'|  dish diameter set to {dish_diameter} m')
 
+    # distance between antennas
+    if ARGS['ant_distance']:
+        ant_distance = float(ARGS['ant_distance']) # m
+        print(f'|  distance between ants set to {ant_distance} m')
+    else:
+        # defaults to diameter+0.6 m (as 14.6 m  for HERA)
+        ant_distance = dish_diameter + 0.6 # m
+        print(f'|  distance between ants defaulted to {ant_distance} m')
+
+
+    print('\nSetting up antenna array ... ')
     # Build the antenna array and output. 
     ant_pos = build_hex_array(hex_spec=(3,4), d=ant_distance)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
@@ -1375,6 +1384,8 @@ if __name__ == "__main__":
     latitude = 30.7215 * np.pi / 180  # HERA loc in decimal numbers ## There's some sign error in the code, so this missing sign is a quick fix
     solver = cg
 
+    print('\nStarting precomputations ...')
+    print('|  Calculating visibility response')
     # Precompute the visibility reponse operator
     vis_response, autos, ell, m = vis_proj_operator_no_rot(freqs=freqs, 
                                                         lsts=lsts, 
@@ -1390,12 +1401,12 @@ if __name__ == "__main__":
 
     if incl_RSB == True:
         assert np.any(freq_list != None), \
-                "To include RSB excess you must define the bounds of the full \
+                "|  !! To include RSB excess you must define the bounds of the full \
                 frequency list in freq_bounds"
         
         for frequency in freqs:
             assert np.any(frequency == freq_list), \
-                    "The frequency(ies) is(are) not represented by the frequency list \
+                    "|  !! The frequency(ies) is(are) not represented by the frequency list \
                     given by freq_bounds"
 
         # Extract index of the pygsm reference frequency for RSB alm picking
@@ -1404,17 +1415,19 @@ if __name__ == "__main__":
         if RSB_only == True:
             # overwrite true alms 
             x_true = RSB_data_model(freq_list=freq_list, lmax=lmax, boost=boost)[freq_idx,:]
-            print("True model is RSB only")
+            print("|  True model is RSB only")
         else:
             x_true += RSB_data_model(freq_list=freq_list, lmax=lmax, boost=boost)[freq_idx,:] 
-            print("RSB excess is included in the data model on top of pygsm")
+            print("|  RSB excess will be included in the data model on top of pygsm")
 
     else:
-        print("RSB excess has not been included in the data model")
+        print(f"|  RSB excess will  not been included in the data model")
 
+    print('|  Defining data model')
     # Combined data model
     model_true = vis_response @ x_true
 
+    print('|  Setting prior covariance')
     # Inverse signal covariance 
     ell_0_idx, _ = get_idx_ml(em=0, ell=0, lmax=lmax)
     min_prior_std = 0.5
@@ -1438,7 +1451,8 @@ if __name__ == "__main__":
         inv_prior_cov = np.zeros_like(prior_cov)
     else:
         inv_prior_cov = 1/prior_cov
-    
+
+    print('|  Setting prior mean')
     if zero_prior_mean == True:
         # Fixes the prior mean to zeros
         a_0 = np.zeros_like(x_true)
@@ -1452,6 +1466,7 @@ if __name__ == "__main__":
     # Save a_0 in separate file as there has been issues with the combined .npz file
     np.savez(path+'a_0_'+f'{prior_seed}_'+f'{jobid}', a_0 = a_0)
     
+    print('|  Setting noise covariance')
     # Inverse noise covariance and noise on data
     np.random.seed(data_seed)
     noise_cov = 0.5 * radiometer_eq(autos@x_true, ants, delta_time, delta_freq)
@@ -1493,13 +1508,15 @@ if __name__ == "__main__":
                                               rtol = tolerance,
                                               maxiter = maxiter)
         initial_guess = wf_soln.copy()
+        print('|  Wiener filter solution used as initial guess for Gibbs sampling')
     else:
         # The initial guess for the Gibbs sampler will be the true sky
         initial_guess = x_true.copy()
+        print('|  True sky is used as initial guess for Gibbs sampling')
 
     # Time for all precomputations
     precomp_time = time.time()-start_time
-    print(f'\nprecomputation took:\n{precomp_time} sec.\n')
+    print(f'\nTIMING | precomputation took: {precomp_time} sec.')
   
     # Saving all precomputed data
     np.savez(path+'precomputed_data_'+f'{data_seed}_'+f'{jobid}',
@@ -1523,7 +1540,6 @@ if __name__ == "__main__":
              precomp_time=precomp_time
              )
 
-
     avg_iter_time = 0
     # Get alm and cl samples
     
@@ -1534,6 +1550,7 @@ if __name__ == "__main__":
     save_step = 100 #TODO: make this an cmd-line arg
     status = -1
     
+    print('\nStarting Gibbs sampling ...')
     for sample_no in range(n_samples):
 
         sample_start_time = time.time()
@@ -1610,12 +1627,12 @@ if __name__ == "__main__":
     #        #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
 
     avg_iter_time /= n_samples
-    print(f'average_iter_time:\n{avg_iter_time} sec.\n')
+    print(f'\nTIMING | average_iter_time: {avg_iter_time} sec')
 
     total_time = time.time()-start_time
-    print(f'total_time:\n{total_time} sec.\n')
-    print(f'All output saved in folder {path}\n')
-    print(f'Note, ant_pos (dict) is saved in own file in {path}\n')
+    print(f'\nTIMING | total_time: {total_time} sec')
+    print(f'\n All output saved in folder {path}')
+    print(f'|  Note, ant_pos (dict) is saved in own file in {path}\n')
    
     np.savez(path+'timing_data_'+f'{data_seed}_'+f'{jobid}',
              precomp_time=precomp_time,
