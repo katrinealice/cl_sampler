@@ -7,15 +7,14 @@
 #SBATCH --cpus-per-task 50
 #SBATCH --job-name cl_sampler
 #SBATCH --array=1 #-40 #Run 40 copies of the code = 400. samples
-#SBATCH --partition cosma8-serial
-#SBATCH --account dp270
-#SBATCH --output /cosma8/data/dp270/dc-glas1/slurm-out/slurm-%A_%a.out
+#SBATCH --output /nfs_perseus2/raid3/kglass/slurm-out/slurm-%A_%a.out
 
 source ~/.bashrc
 conda deactivate
-conda activate hera_sim
+conda activate hydra
 
-SCRIPT="/cosma/home/dp270/dc-glas1/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
+SCRIPT="/home/kglass/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
+$SLURM_ARRAY_TASK_ID=0
 
 echo $@
 
@@ -55,7 +54,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -RSB_boost=1 \
                   -cosmic_var=false \
                   -front_factor=0.1 \
-                  -zero_prior_mean=false \
+                  -zero_prior_mean=true \
                   -zero_inv_prior=false \
                   -cl_prior_pow=0. \
                   -noise_factor=1 \
@@ -63,8 +62,8 @@ python -u $SCRIPT -dir="$output_dir" \
                   "$@"
 
 # Save a copy of the shell script in the directory created by cl_sampler.py
-if [ -d "/cosma8/data/dp270/dc-glas1/$output_dir" ]; then
-    cp "$0" "/cosma8/data/dp270/dc-glas1/$output_dir/run_sampler.sh"
+if [ -d "/nfs_perseus2/raid3/kglass/$output_dir" ]; then
+    cp "$0" "/nfs_perseus2/raid3/kglass/$output_dir/run_sampler.sh"
 else
     echo "Error: output directory '$output_dir' does not exist"
     exit 1
