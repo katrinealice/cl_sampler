@@ -17,17 +17,19 @@ from scipy.stats import invgamma
 import healpy as hp
 
 # GSM  (NOTE: GSM is deprecated, they update GDSM now: https://github.com/telegraphic/pygdsm)
-from pygdsm import GlobalSkyModel2016
+from pygdsm import GlobalSkyModel16
 from pygdsm import GlobalSkyModel
 
 # Wigner D matrices
 import spherical, quaternionic
 
 # Simulation
-import pyuvsim
+#import pyuvsim
+#from pyuvdata.analytic_beam import AnalyticBeam
+from pyuvdata import GaussianBeam
 
 # Hydra
-sys.path.append("/cosma8/data/dp270/dc-glas1/Hydra") # change this to your own path
+sys.path.append("/home/kglass/Hydra") # change this to your own path
 import hydra
 from hydra.utils import build_hex_array
 
@@ -504,7 +506,7 @@ def get_healpy_from_gsm(freq, lmax, nside=64, resolution="low", output_model=Fal
         If output_map=False (default): no map output.
     
     """
-    gsm_2016 = GlobalSkyModel2016(freq_unit='MHz', resolution=resolution) 
+    gsm_2016 = GlobalSkyModel16(freq_unit='MHz', resolution=resolution) 
     gsm_map = gsm_2016.generate(freqs=freq)
     gsm_upgrade = hp.ud_grade(gsm_map, nside)
     healpy_modes_gal = hp.map2alm(maps=gsm_upgrade,lmax=lmax)
@@ -679,7 +681,7 @@ def get_alm_samples(data_vec,
     time_start_solver = time.time()
     x_soln, convergence_info = solver(A = lhs_linear_op,
                                       b = rhs,
-                                      tol = tolerance,
+                                      rtol = tolerance,
                                       maxiter = maxiter,
                                       x0 = initial_guess) 
 
@@ -1108,7 +1110,7 @@ if __name__ == "__main__":
     else:
         directory = "output"
 
-    path = f'/cosma8/data/dp270/dc-glas1/{directory}/'
+    path = f'/home/kglass/data/{directory}/'
     try: 
         os.makedirs(path)
         print(f'Created folder {path}\n')
@@ -1343,7 +1345,7 @@ if __name__ == "__main__":
     ant_dict = dict((str(ant), ant_pos[ant]) for ant in ant_pos)
     np.savez(path+'ant_pos',**ant_dict)
 
-    beams = [pyuvsim.AnalyticBeam('gaussian', diameter=dish_diameter) for ant in ants]
+    beams = [GaussianBeam(diameter=dish_diameter) for ant in ants]
     lsts_hours = np.linspace(lst_start,lst_end,NLST)      # in hours for easy setting
     lsts = np.deg2rad((lsts_hours/24)*360) # in radian, used by HYDRA (and this code)
     delta_time = 60 # s
@@ -1466,7 +1468,7 @@ if __name__ == "__main__":
          # Get the Wiener Filter solution for initial guess
         wf_soln, wf_convergence_info = solver(A = lhs_linear_op,
                                               b = rhs_wf,
-                                              tol = tolerance,
+                                              rtol = tolerance,
                                               maxiter = maxiter)
         initial_guess = wf_soln.copy()
     else:
