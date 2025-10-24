@@ -17,7 +17,10 @@ from scipy.stats import invgamma
 import healpy as hp
 
 # GSM  (NOTE: GSM is deprecated, they update GDSM now: https://github.com/telegraphic/pygdsm)
-from pygdsm import GlobalSkyModel16
+try:
+    from pygdsm import GlobalSkyModel2016 as GSM16
+except:
+    from pygdsm import GlobalSkyModel16 as GSM16
 from pygdsm import GlobalSkyModel
 
 # Wigner D matrices
@@ -506,7 +509,7 @@ def get_healpy_from_gsm(freq, lmax, nside=64, resolution="low", output_model=Fal
         If output_map=False (default): no map output.
     
     """
-    gsm_2016 = GlobalSkyModel16(freq_unit='MHz', resolution=resolution) 
+    gsm_2016 = GSM16(freq_unit='MHz', resolution=resolution) 
     gsm_map = gsm_2016.generate(freqs=freq)
     gsm_upgrade = hp.ud_grade(gsm_map, nside)
     healpy_modes_gal = hp.map2alm(maps=gsm_upgrade,lmax=lmax)
@@ -1123,6 +1126,7 @@ if __name__ == "__main__":
     else:
         # if none is passed go back to 10 as before
         data_seed = 10
+    print(f'|  random seed for data set to data_seed = {data_seed}')
 
     # Defining the prior_seed for the prior variance and prior mean
     if ARGS['prior_seed']:
@@ -1130,6 +1134,7 @@ if __name__ == "__main__":
     else:
         # If none is passed, default will be 20
         prior_seed = 20
+    print(f'|  random seed for prior set to prior_seed = {prior_seed}') 
 
     # Defining the jobid to distinguish multiple runs in one go
     if ARGS['jobid']: 
@@ -1137,11 +1142,13 @@ if __name__ == "__main__":
     else:
         # if none is passed then don't change the keys
         jobid = 0
+    print(f'|  current runs jobid is {jobid}')
 
     # enable/disable cProfile
     if ARGS['profile']:
         if ARGS['profile'].lower() in ('true', 'yes', 't', 'y', '1'):
             profile = True
+            print('|  cProfile is enable for diagnostics')
         elif ARGS['profile'].lower() in ('false', 'no', 'f', 'n', '0'):
             profile = False
         else:
@@ -1155,6 +1162,7 @@ if __name__ == "__main__":
     else:
         # Defaults to the scipy/cg solver's default:
         tolerance = 1e-05
+    print(f'|  tolerance for cg-solver is set to {tolerance}')
 
     # The maximum number of iterations allowed for the cg_solver
     if ARGS['maxiter']:
@@ -1162,6 +1170,7 @@ if __name__ == "__main__":
     else:
         # Defaults to 30000, but rememeber to check convergence_info!
         maxiter = 30000
+    print(f'|  maximum number of iterations for cg solver is {maxiter}')
 
     # Toggling whether the Cl's are sampled too:
     if ARGS['cl_sampling']:
@@ -1173,6 +1182,10 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError('Boolean value expected for cl_sampling')
     else:
         cl_sampling = False
+    if cl_sampling == True:
+        print(f'|  C_ell sampling is enabled')
+    else:
+        print(f'|  !! No sampling of C_ell')
 
     # Toggling whether the Wiener Filter is calculated and used as initial guess:
     if ARGS['include_wf']:
@@ -1190,6 +1203,7 @@ if __name__ == "__main__":
     if ARGS['include_RSB']:
         if ARGS['include_RSB'].lower() in ('true', 'yes', 't', 'y', '1'):
             incl_RSB = True
+            print(f'|  Including RSB component in sky model')
         elif ARGS['include_RSB'].lower() in ('false', 'no', 'f', 'n', '0'):
             incl_RSB = False
         else:
@@ -1197,12 +1211,14 @@ if __name__ == "__main__":
     else:
         incl_RSB = False
 
+
+
     # Using only the RSB as the true input model:
     if ARGS['RSB_only']:
         if ARGS['RSB_only'].lower() in ('true', 'yes', 't', 'y', '1'):
             RSB_only = True
             incl_RSB = True
-            print('RSB_only has been set to True')
+            print('RSB is the only component in the sky model')
         elif ARGS['RSB_only'].lower() in ('false', 'no', 'f', 'n', '0'):
             RSB_only = False
         else:
@@ -1236,6 +1252,7 @@ if __name__ == "__main__":
     if ARGS['zero_prior_mean']:
         if ARGS['zero_prior_mean'].lower() in ('true', 'yes', 't', 'y', '1'):
             zero_prior_mean = True
+            print(f'|  The prior mean has been fixed to zero')
         elif ARGS['zero_prior_mean'].lower() in ('false', 'no', 'f', 'n', '0'):
             zero_prior_mean = False
         else:
@@ -1247,6 +1264,7 @@ if __name__ == "__main__":
     if ARGS['zero_inverse_prior_cov']:
         if ARGS['zero_inverse_prior_cov'].lower() in ('true', 'yes', 't', 'y', '1'):
             zero_inv_prior = True
+            print(f'|  the inverse prior covariance has been fixed to zero')
         elif ARGS['zero_inverse_prior_cov'].lower() in ('false', 'no', 'f', 'n', '0'):
             zero_inv_prior = False
         else:
@@ -1274,18 +1292,21 @@ if __name__ == "__main__":
     else:
         # If none is passed use 100 samples as default
         n_samples = 100
+    print(f'|  Number of samples set to {n_samples}')
 
     # The lmax for the spherical harmonic modes
     if ARGS['lmax']:
         lmax = int(ARGS['lmax'])
     else:
         lmax = 20
+    print(f'|  lmax set to {lmax}') 
 
     # The nside / resolution for HEALpy operations
     if ARGS['nside']:
         nside = int(ARGS['nside'])
     else:
         nside = 128
+    print(f'|  nside set to {nside}')
 
     # Frequency (in Hz) and pygsm frequency (in MHz) 
     # TODO: this is a remnant from when it was a multifrequency instead of 
@@ -1296,6 +1317,7 @@ if __name__ == "__main__":
     else:
         freqs = np.array([100e06]) # Hz, Hydra requires this
         ref_freq = 100. # MHz, PyGSM requires this 
+    print(f'|  reference frequency set to {ref_freq} MHz')
 
     # Sets the frequency list for the RSB data model. Includes both ends of range.
     if ARGS['freq_bounds']:
