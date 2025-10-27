@@ -46,3 +46,5 @@ Currently using the [GCR sampler](https://github.com/katrinealice/sph_harm_GCR) 
 **front_factor**: Float. This is the front factor for the prior covariance for the monopole (a_00) mode. Defaults to 1 (i.e. no special treatment) 
 
 **RSB_only**: Boolean. Sets the sky model to be given by the RSB-model only. Defaults to false.
+
+**noise_factor**: Float. Scales the noise level on the data only. Defaults to 1 (no modulation)
