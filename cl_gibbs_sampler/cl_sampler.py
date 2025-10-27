@@ -1112,13 +1112,27 @@ if __name__ == "__main__":
     else:
         directory = "output"
 
-    path = f'/home/kglass/data/{directory}/'
-    try: 
-        os.makedirs(path)
-        print(f'|  Created folder {path}')
-    except FileExistsError:
-        print(f'|  Folder {path} already exists')
+    parent_path = '/home/kglass/data/'
+    #path = f'/home/kglass/data/{directory}/'
+    #path = os.path.join(parent_path, directory)
+    #try: 
+    #    os.makedirs(path)
+    #    print(f'|  Created folder {path}')
+    #except FileExistsError:
+    #    print(f'|  Folder {path} already exists')
     
+    if os.path.exists(parent_path+directory):
+        print(f'|  Folder {directory} already exists')
+        i=1
+        while os.path.exists(parent_path+f'{directory}_{i}'):
+            i += 1
+        directory = f'{directory}_{i}'
+        print(f'|  |  updated directory = {directory}')
+        
+    path = parent_path+f'{directory}/'
+    os.makedirs(path)
+    print(f'|  Output directory={path}')
+
     print(f'\nDefining random seeds and id ... ')
     # Defining the data_seed for the noise of the simulated data
     if ARGS['data_seed']:
@@ -1631,7 +1645,7 @@ if __name__ == "__main__":
 
     total_time = time.time()-start_time
     print(f'\nTIMING | total_time: {total_time} sec')
-    print(f'\n All output saved in folder {path}')
+    print(f'\nAll output saved in folder {path}')
     print(f'|  Note, ant_pos (dict) is saved in own file in {path}\n')
    
     np.savez(path+'timing_data_'+f'{data_seed}_'+f'{jobid}',
