@@ -34,8 +34,6 @@ sys.path.append("/home/kglass/Hydra") # change this to your own path
 import hydra
 from hydra.utils import build_hex_array
 
-import argparse
-
 # Linear solver 
 from scipy.sparse.linalg import cg, LinearOperator
 
@@ -58,6 +56,16 @@ from multiprocessing import Pool
 # Printing full arrays
 np.set_printoptions(threshold=sys.maxsize)
 
+#try:
+from utils.colorprint import ColorPrint
+print_err = ColorPrint.print_error
+print_time = ColorPrint.print_bold
+#except ImportError:
+#    # Fallback if the module isn't available
+#    print_err = print
+#    print_time = print
+
+import argparse
 # Construct the argument parser
 AP = argparse.ArgumentParser()
 
@@ -1117,7 +1125,7 @@ if __name__ == "__main__":
         os.makedirs(path)
         print(f'|  Created folder {path}')
     except FileExistsError:
-        print(f'|  !! Folder {path} already exists')
+        print_err(f'|  !! Folder {path} already exists')
     
     print(f'\nDefining random seeds and id ... ')
     # Defining the data_seed for the noise of the simulated data
@@ -1516,7 +1524,7 @@ if __name__ == "__main__":
 
     # Time for all precomputations
     precomp_time = time.time()-start_time
-    print(f'\nTIMING | precomputation took: {precomp_time} sec.')
+    print_time(f'\nTIMING | precomputation took: {precomp_time} sec.')
   
     # Saving all precomputed data
     np.savez(path+'precomputed_data_'+f'{data_seed}_'+f'{jobid}',
@@ -1627,10 +1635,10 @@ if __name__ == "__main__":
     #        #print(f'Iteration {key} completed in {iteration_time:.2f} seconds')
 
     avg_iter_time /= n_samples
-    print(f'\nTIMING | average_iter_time: {avg_iter_time} sec')
+    print_time(f'\nTIMING | average_iter_time: {avg_iter_time} sec')
 
     total_time = time.time()-start_time
-    print(f'TIMING | total_time: {total_time} sec')
+    print_time(f'TIMING | total_time: {total_time} sec')
     print(f'\nAll output saved in folder {path}')
     print(f'|  Note, ant_pos (dict) is saved in own file in {path}\n')
    
