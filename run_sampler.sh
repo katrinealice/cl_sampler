@@ -45,6 +45,7 @@ python -u $SCRIPT -dir="$output_dir" \
                   -lst_start=0.\
                   -lst_end=8.\
                   -dish_dia=1.\
+		  -ant_dist=1.5\
                   -cl_sampling=true \
                   -include_wf=true \
                   -include_RSB=false \
