@@ -1117,7 +1117,7 @@ if __name__ == "__main__":
         os.makedirs(path)
         print(f'|  Created folder {path}')
     except FileExistsError:
-        print(f'|  Folder {path} already exists')
+        print(f'|  !! Folder {path} already exists')
     
     print(f'\nDefining random seeds and id ... ')
     # Defining the data_seed for the noise of the simulated data
@@ -1630,8 +1630,8 @@ if __name__ == "__main__":
     print(f'\nTIMING | average_iter_time: {avg_iter_time} sec')
 
     total_time = time.time()-start_time
-    print(f'\nTIMING | total_time: {total_time} sec')
-    print(f'\n All output saved in folder {path}')
+    print(f'TIMING | total_time: {total_time} sec')
+    print(f'\nAll output saved in folder {path}')
     print(f'|  Note, ant_pos (dict) is saved in own file in {path}\n')
    
     np.savez(path+'timing_data_'+f'{data_seed}_'+f'{jobid}',
