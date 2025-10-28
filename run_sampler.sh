@@ -14,6 +14,7 @@ conda deactivate
 conda activate hydra
 
 SCRIPT="/home/kglass/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
+DATA="/home/kglass/data"
 $SLURM_ARRAY_TASK_ID=0
 
 echo $@
@@ -58,11 +59,12 @@ python -u $SCRIPT -dir="$output_dir" \
                   -cl_prior_pow=0. \
                   -noise_factor=1 \
                   -jobid=$SLURM_ARRAY_TASK_ID \
-                  "$@"
+                  "$@" \
+		  2>&1 | tee "$DATA/$output_dir/output.log" 
 
 # Save a copy of the shell script in the directory created by cl_sampler.py
-if [ -d "/nfs_perseus2/raid3/kglass/data/$output_dir" ]; then
-    cp "$0" "/nfs_perseus2/raid3/kglass/data/$output_dir/run_sampler.sh"
+if [ -d "$DATA/$output_dir" ]; then
+	cp "$0" "$DATA/$output_dir/run_sampler_$(date +%Y-%m-%d).sh"
 else
     echo "Error: output directory '$output_dir' does not exist"
     exit 1

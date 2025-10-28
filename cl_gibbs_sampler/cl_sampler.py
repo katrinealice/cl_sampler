@@ -56,14 +56,16 @@ from multiprocessing import Pool
 # Printing full arrays
 np.set_printoptions(threshold=sys.maxsize)
 
-#try:
-from utils.colorprint import ColorPrint
-print_err = ColorPrint.print_error
-print_time = ColorPrint.print_bold
-#except ImportError:
-#    # Fallback if the module isn't available
-#    print_err = print
-#    print_time = print
+try:
+    from utils.colorprint import ColorPrint
+    print_err = ColorPrint.print_error
+    print_bold = ColorPrint.print_bold
+    print_time = ColorPrint.print_info
+except ImportError:
+    # Fallback if the module isn't available
+    print_err = print
+    print_bold = print
+    print_time = print
 
 import argparse
 # Construct the argument parser
@@ -1113,7 +1115,7 @@ def RSB_data_model(freq_list, lmax, boost):
 if __name__ == "__main__":
     start_time = time.time()
     
-    print('\nSetting output directory ...')
+    print_bold('\nSetting output directory ...')
     # Creating directory for output
     if ARGS['directory']: 
         directory = str(ARGS['directory'])
@@ -1127,7 +1129,7 @@ if __name__ == "__main__":
     except FileExistsError:
         print_err(f'|  !! Folder {path} already exists')
     
-    print(f'\nDefining random seeds and id ... ')
+    print_bold(f'\nDefining random seeds and id ... ')
     # Defining the data_seed for the noise of the simulated data
     if ARGS['data_seed']:
         data_seed = int(ARGS['data_seed'])
@@ -1164,7 +1166,7 @@ if __name__ == "__main__":
     else:
         profile = False
 
-    print('\nSetting up sampling parameters ...')
+    print_bold('\nSetting up sampling parameters ...')
     # Number of samples
     if ARGS['number_of_samples']:
         n_samples = int(ARGS['number_of_samples'])
@@ -1202,7 +1204,7 @@ if __name__ == "__main__":
     if cl_sampling == True:
         print(f'|  C_ell sampling is enabled')
     else:
-        print(f'|  !! No sampling of C_ell')
+        print_err(f'|  !! No sampling of C_ell')
 
     # Toggling whether the Wiener Filter is calculated and used as initial guess:
     if ARGS['include_wf']:
@@ -1317,7 +1319,7 @@ if __name__ == "__main__":
         nside = 128
     print(f'|  nside set to {nside}')
 
-    print('\nSetting up observational parameters ...')
+    print_bold('\nSetting up observational parameters ...')
     # Frequency (in Hz) and pygsm frequency (in MHz) 
     # TODO: this is a remnant from when it was a multifrequency instead of 
     # per frequency code. Consider changing this.  
@@ -1377,7 +1379,7 @@ if __name__ == "__main__":
         print(f'|  distance between ants defaulted to {ant_distance} m')
 
 
-    print('\nSetting up antenna array ... ')
+    print_bold('\nSetting up antenna array ... ')
     # Build the antenna array and output. 
     ant_pos = build_hex_array(hex_spec=(3,4), d=ant_distance)  #builds array with (3,4,3) ants = 10 total
     ants = list(ant_pos.keys())
@@ -1392,7 +1394,7 @@ if __name__ == "__main__":
     latitude = 30.7215 * np.pi / 180  # HERA loc in decimal numbers ## There's some sign error in the code, so this missing sign is a quick fix
     solver = cg
 
-    print('\nStarting precomputations ...')
+    print_bold('\nStarting precomputations ...')
     print('|  Calculating visibility response')
     # Precompute the visibility reponse operator
     vis_response, autos, ell, m = vis_proj_operator_no_rot(freqs=freqs, 
@@ -1429,7 +1431,7 @@ if __name__ == "__main__":
             print("|  RSB excess will be included in the data model on top of pygsm")
 
     else:
-        print(f"|  RSB excess will  not been included in the data model")
+        print(f"|  RSB excess will not been included in the data model")
 
     print('|  Defining data model')
     # Combined data model
@@ -1558,7 +1560,7 @@ if __name__ == "__main__":
     save_step = 100 #TODO: make this an cmd-line arg
     status = -1
     
-    print('\nStarting Gibbs sampling ...')
+    print_bold('\nStarting Gibbs sampling ...')
     for sample_no in range(n_samples):
 
         sample_start_time = time.time()
@@ -1639,7 +1641,7 @@ if __name__ == "__main__":
 
     total_time = time.time()-start_time
     print_time(f'TIMING | total_time: {total_time} sec')
-    print(f'\nAll output saved in folder {path}')
+    print_bold(f'\nAll output saved in folder {path}')
     print(f'|  Note, ant_pos (dict) is saved in own file in {path}\n')
    
     np.savez(path+'timing_data_'+f'{data_seed}_'+f'{jobid}',
