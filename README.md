@@ -1,5 +1,5 @@
 
-# Project repository to build a Gibbs sampler for $C_{\ell}$ and $a_{lm}$ spherical harmonic modes. 
+# Project repository to build a Gibbs sampler for $C_{\ell}$ and $a_{{\ell}m}$ spherical harmonic modes. 
 
 Work in progress ...
 
