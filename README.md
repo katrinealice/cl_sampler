@@ -20,6 +20,7 @@ Currently based on the [GCR sampler](https://github.com/katrinealice/sph_harm_GC
 
 All arguments can be passed using either **long-form** (`--argument`) or **short-form** (`-arg`) syntax.
 
+<div style="font-size:0.9em">
 | Short Flag | Long Name | Type | Default | Description |
 |-------------|------------|------|----------|--------------|
 | `-dir` | `--directory` | `str` | `"output"` | Output directory for saving results. |
@@ -50,6 +51,7 @@ All arguments can be passed using either **long-form** (`--argument`) or **short
 | `-zero_inv_prior` | `--zero_inv_prior` | `bool` | `false` | Set the inverse prior to zero (for testing). |
 | `-cl_prior_pow` | `--cl_prior_power` | `float` | `0.0` | Power-law index applied to the $C_{\ell}$ prior. |
 | `-noise_factor` | `--noise_factor` | `float` | `1.0` | Scale factor for the noise level on the data. |
+</div>
 
 - All arguments have sensible defaults for testing and debugging.
 - For production runs, adjust seeds, sampling options, and solver settings accordingly.
