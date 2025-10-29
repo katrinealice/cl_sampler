@@ -20,7 +20,7 @@ Currently based on the [GCR sampler](https://github.com/katrinealice/sph_harm_GC
 
 All arguments can be passed using either **long-form** (`--argument`) or **short-form** (`-arg`) syntax.
 
-<div style="font-size:0.9em">
+<div style="font-size:0.85em">
 
 <table>
   <thead>
@@ -52,7 +52,7 @@ All arguments can be passed using either **long-form** (`--argument`) or **short
     <tr><td><code>-ant_dist</code></td><td><code>--ant_distance</code></td><td>float</td><td>dish_dia + 0.6 (m)</td><td>Distance between antennas in the hex grid (≈ 14.6 m for HERA).</td></tr>
     <tr><td><code>-cl_sampling</code></td><td><code>--cl_sampling</code></td><td>bool</td><td>false</td><td>Toggles C<sub>ℓ</sub> sampling.</td></tr>
     <tr><td><code>-include_wf</code></td><td><code>--include_wiener_filter</code></td><td>bool</td><td>false</td><td>Include Wiener-filtered mean field in the Gibbs update.</td></tr>
-    <tr><td><code>-include_RSB</code></td><td><code>--include_RSB</code></td><td>bool</td><td>false</td><td>Include the RSB component in the sky model.</td></tr>
+    <tr><td><code>-include_RSB</code></td><td><code>--include_RSB</code></td><td>bool</td><td>false</td><td>Include the RSB component in the sky model. Requires <code>freq_bounds</code>.</td></tr>
     <tr><td><code>-RSB_only</code></td><td><code>--RSB_only</code></td><td>bool</td><td>false</td><td>Use RSB-only sky model (ignore other contributions).</td></tr>
     <tr><td><code>-RSB_boost</code></td><td><code>--RSB_boost</code></td><td>float</td><td>1.0</td><td>Boost factor applied to the RSB component.</td></tr>
     <tr><td><code>-cosmic_var</code></td><td><code>--cosmic_variance</code></td><td>bool</td><td>false</td><td>Toggles inclusion of cosmic variance in the prior variance.</td></tr>
