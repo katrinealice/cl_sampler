@@ -20,7 +20,7 @@ Currently based on the [GCR sampler](https://github.com/katrinealice/sph_harm_GC
 
 All arguments can be passed using either **long-form** (`--argument`) or **short-form** (`-arg`) syntax.
 
-<div style="font-size:0.85em">
+<div style="font-size:0.8em">
 
 <table>
   <thead>
@@ -49,7 +49,7 @@ All arguments can be passed using either **long-form** (`--argument`) or **short
     <tr><td><code>-lst_start</code></td><td><code>--lst_start</code></td><td>float</td><td>0.0 (hours)</td><td>Start of the LST range.</td></tr>
     <tr><td><code>-lst_end</code></td><td><code>--lst_end</code></td><td>float</td><td>8.0 (hours)</td><td>End of the LST range.</td></tr>
     <tr><td><code>-dish_dia</code></td><td><code>--dish_diameter</code></td><td>float</td><td>14.0 (m)</td><td>Diameter of dishes in the array (HERA-like default).</td></tr>
-    <tr><td><code>-ant_dist</code></td><td><code>--ant_distance</code></td><td>float</td><td>dish_dia + 0.6 (m)</td><td>Distance between antennas in the hex grid (≈ 14.6 m for HERA).</td></tr>
+    <tr><td><code>-ant_dist</code></td><td><code>--ant_distance</code></td><td>float</td><td><code>dish_dia+0.6</code> (m)</td><td>Distance between antennas in the hex grid (≈ 14.6 m for HERA).</td></tr>
     <tr><td><code>-cl_sampling</code></td><td><code>--cl_sampling</code></td><td>bool</td><td>false</td><td>Toggles C<sub>ℓ</sub> sampling.</td></tr>
     <tr><td><code>-include_wf</code></td><td><code>--include_wiener_filter</code></td><td>bool</td><td>false</td><td>Include Wiener-filtered mean field in the Gibbs update.</td></tr>
     <tr><td><code>-include_RSB</code></td><td><code>--include_RSB</code></td><td>bool</td><td>false</td><td>Include the RSB component in the sky model. Requires <code>freq_bounds</code>.</td></tr>
