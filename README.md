@@ -34,7 +34,7 @@ All arguments can be passed using either **long-form** (`--argument`) or **short
 | `-nside` | `--nside` | `int` | `128` | Resolution used for `HEALPy` operations. |
 | `-freq` | `--frequency` | `float` | `100` (MHz) | Frequency (in MHz) to sample at; also defines the reference frequency for the true sky. |
 | `-freq_bounds` | `--frequency_bounds` | `list[float]` | `None` | Frequency range for RSB ordered as `[start, stop, step]` (MHz). Requires `include_RSB=True`. |
-| `-NLST` | `--NLST` | `int` | `10` (hours) | Number of Local Sidereal Time (LST) timesteps. |
+| `-NLST` | `--NLST` | `int` | `10` | Number of Local Sidereal Time (LST) timesteps. |
 | `-lst_start` | `--lst_start` | `float` | `0.0` (hours) | Start of the LST range. |
 | `-lst_end` | `--lst_end` | `float` | `8.0` (hours) | End of the LST range. |
 | `-dish_dia` | `--dish_diameter` | `float` | `14.0` (m) | Diameter of dishes in the array (HERA-like default). |
