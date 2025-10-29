@@ -59,11 +59,13 @@ np.set_printoptions(threshold=sys.maxsize)
 try:
     from utils.colorprint import ColorPrint
     print_err = ColorPrint.print_error
+    print_warn = ColorPrint.print_warn
     print_bold = ColorPrint.print_bold
     print_time = ColorPrint.print_info
 except ImportError:
     # Fallback if the module isn't available
     print_err = print
+    print_warn = print
     print_bold = print
     print_time = print
 
@@ -1204,7 +1206,7 @@ if __name__ == "__main__":
     if cl_sampling == True:
         print(f'|  C_ell sampling is enabled')
     else:
-        print_err(f'|  !! No sampling of C_ell')
+        print_warn(f'|  !! No sampling of C_ell')
 
     # Toggling whether the Wiener Filter is calculated and used as initial guess:
     if ARGS['include_wf']:

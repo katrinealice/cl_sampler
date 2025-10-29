@@ -15,6 +15,7 @@ conda activate hydra
 
 SCRIPT="/home/kglass/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 DATA="/home/kglass/data"
+LOGFILE="$DATA/temp_output_$(date +%Y-%m-%d_%H-%M-%S).log"
 $SLURM_ARRAY_TASK_ID=0
 
 echo $@
@@ -60,7 +61,10 @@ python -u $SCRIPT -dir="$output_dir" \
                   -noise_factor=1 \
                   -jobid=$SLURM_ARRAY_TASK_ID \
                   "$@" \
-		  2>&1 | tee "$DATA/$output_dir/output.log" 
+		  2>&1 | tee -a "$LOGFILE"
+
+# move python output to correct folder
+mv "$LOGFILE" "$DATA/$output_dir/output.log"
 
 # Save a copy of the shell script in the directory created by cl_sampler.py
 if [ -d "$DATA/$output_dir" ]; then
