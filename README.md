@@ -75,5 +75,5 @@ All arguments can be passed using either **long-form** (`--argument`) or **short
 
 - Arguments can be provided via the command line, e.g.:
   ```bash
-  python run_sampler.py --dir results -lmax 30 -nsamples 200
+  python run_sampler.py -dir results -lmax 30 -nsamples 200
   ```

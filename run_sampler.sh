@@ -16,20 +16,25 @@ conda activate hydra
 SCRIPT="/home/kglass/cl_sampler/cl_gibbs_sampler/cl_sampler.py"
 DATA="/home/kglass/data"
 LOGFILE="$DATA/temp_output_$(date +%Y-%m-%d_%H-%M-%S).log"
-$SLURM_ARRAY_TASK_ID=0
+SLURM_ARRAY_TASK_ID=0
 
 echo $@
 
 # set default output directory (will be overwritten if parsed as cmd-line arg)
 output_dir="output"    # <------ change the directory name here or in cmd-line
-for arg in "$@"
-do
-    case $arg in 
-        -dir=*)
-        output_dir="${arg#*=}"
-        ;;
+prev=""
+for arg in "$@"; do
+    if [[ "$prev" == "-dir" ]]; then
+        output_dir="$arg"
+        prev=""
+        continue
+    fi
+    case "$arg" in
+        -dir=*) output_dir="${arg#*=}" ;;
+        -dir) prev="-dir" ;;
     esac
 done
+
 
 export OMP_NUM_THREADS=1 
 python -u $SCRIPT -dir="$output_dir" \
